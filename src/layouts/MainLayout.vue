@@ -28,22 +28,56 @@
           Menu
         </q-item-label>
 
-        <q-item
-          clickable
-          to="/usuarios">
-
+        <q-item clickable to="/">
           <q-item-section avatar>
-            <q-icon name="people"/>
-          </q-item-section>
+            <q-icon name="dashboard" />
+        </q-item-section>
 
-          <q-item-section>
-            <q-item-label>Usuários</q-item-label>
-            <q-item-label caption>
-              Gerenciar usuários
-            </q-item-label>
-          </q-item-section>
+        <q-item-section>
+          <q-item-label>Dashboard</q-item-label>
+        </q-item-section>
         </q-item>
 
+        <q-item clickable to="/alugueis">
+          <q-item-section avatar>
+            <q-icon name="menu_book" />
+        </q-item-section>
+
+        <q-item-section>
+          <q-item-label>Aluguéis</q-item-label>
+        </q-item-section>
+        </q-item>
+
+        <q-item clickable to="/livros">
+          <q-item-section avatar>
+            <q-icon name="book" />
+        </q-item-section>
+
+        <q-item-section>
+          <q-item-label>Livros</q-item-label>
+        </q-item-section>
+        </q-item>
+
+        <q-item clickable to="/editoras">
+          <q-item-section avatar>
+            <q-icon name="business" />
+        </q-item-section>
+
+        <q-item-section>
+          <q-item-label>Editoras</q-item-label>
+        </q-item-section>
+        </q-item>
+
+        <q-item clickable to="/usuarios">
+          <q-item-section avatar>
+            <q-icon name="people" />
+        </q-item-section>
+
+        <q-item-section>
+          <q-item-label>Usuários</q-item-label>
+        </q-item-section>
+        </q-item>
+        
       </q-list>
     </q-drawer>
 
