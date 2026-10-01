@@ -5,13 +5,14 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
     children: [
-      { path: '', component: () => import('@/pages/IndexPage.vue') },
-      { path: 'second', component: () => import('@/pages/SecondPage.vue') },
+      { path: 'usuarios', component: () => import('@/pages/UserPage.vue') },
+      { path: 'dashboard', component: () => import('@/pages/DashboardPage.vue') },
+      { path: 'alugueis', component: () => import('@/pages/LoansPage.vue') },
+      { path: 'livros', component: () => import('@/pages/BooksPage.vue') },
+      { path: 'editoras', component: () => import('@/pages/PublisherPage.vue') },
     ],
   },
 
-  // Always leave this as last one,
-  // but you can also remove it
   {
     path: '/:catchAll(.*)*',
     component: () => import('@/pages/ErrorNotFound.vue'),
