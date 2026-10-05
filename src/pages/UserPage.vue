@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="q-pa-md user-page">
 
     <section class="topo">
       <div class="cards">
@@ -69,6 +69,8 @@
         row-key="id"
         hide-pagination
         :rows-per-page-options="[0]"
+        no-data-label="Dados serão carregados pelo backend."
+        class="user-table"
       />
     </section>
   </q-page>
@@ -116,46 +118,58 @@ const colunas: QTableColumn[] = [
     name: 'livros',
     label: 'Livros alugados',
     field: 'livros',
-    align: 'left',
+    align: 'center',
   },
   {
     name: 'status',
     label: 'Status',
     field: 'status',
-    align: 'left',
+    align: 'center',
   },
   {
     name: 'acao',
     label: 'Ação',
     field: 'acao',
-    align: 'left',
+    align: 'center',
   },
 ];
 </script>
 
 
 <style scoped>
+.user-page {
+  padding: 15px 20px;
+  background-color: #ffffff;
+  color: #1b3a5c;
+}
+
 .topo {
-  margin-top: 15px;
   margin-bottom: 25px;
 }
 
 .cards {
   display: flex;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
 .card {
   width: 115px;
   height: 80px;
-  background-color: white;
-  border: 1px solid #1B3A5C;
+  padding: 8px;
+  background-color: #ffffff;
+  border: 1px solid #1b3a5c;
   border-radius: 6px;
+  box-shadow: none;
+}
+
+.card :deep(.q-card__section) {
+  padding: 0;
 }
 
 .card-title {
-  color: #1B3A5C;
-  font-size: 15px;
+  color: #34454d;
+  font-size: 13px;
 }
 
 .indicador {
@@ -179,9 +193,11 @@ const colunas: QTableColumn[] = [
 }
 
 .card-value {
-  margin-top: 0px;
-  color: #1B3A5C;
+  margin-top: 8px;
+  color: #1b3a5c;
   font-size: 30px;
+  line-height: 30px;
+  font-weight: 600;
   text-align: center;
 }
 
@@ -190,6 +206,7 @@ const colunas: QTableColumn[] = [
   align-items: center;
   gap: 20px;
   margin-bottom: 25px;
+  min-width: 0;
 }
 
 .campo-busca {
@@ -198,5 +215,44 @@ const colunas: QTableColumn[] = [
 
 .filtro-status {
   width: 180px;
+}
+
+.tabela {
+  width: 100%;
+  min-height: 250px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid #1b3a5c;
+  border-radius: 6px;
+  background-color: #ffffff;
+}
+
+.user-table {
+  width: 100%;
+}
+
+.user-table :deep(th) {
+  border-bottom: 1px solid #bdbdbd;
+  color: #1b3a5c;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.user-table :deep(td) {
+  border-bottom: 1px solid #eeeeee;
+  color: #444444;
+  font-size: 13px;
+}
+
+@media (max-width: 700px) {
+  .pesquisa {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .filtro-status {
+    width: 100%;
+  }
 }
 </style>
