@@ -56,7 +56,8 @@
         outlined
         dense
         :options="opcoesStatus"
-        class="filtro-status"
+        class="filtro-status filter-select"
+        popup-content-class="filter-select-menu"
       />
 
     </section>

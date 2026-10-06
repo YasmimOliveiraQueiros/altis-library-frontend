@@ -1,1 +1,36 @@
 /* app global css */
+html,
+body,
+#q-app {
+  background-color: #fdfeff;
+  color: #fdfeff;
+}
+
+.q-layout {
+  background-color: #fdfeff;
+}
+
+.q-page-container {
+  background-color: #fdfeff;
+}
+
+.q-page {
+  background-color: #fdfeff;
+}
+
+.filter-select .q-field__native,
+.filter-select .q-field__input {
+  color: #1b3a5c;
+}
+
+.filter-select .q-field__native::placeholder,
+.filter-select .q-field__input::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+.filter-select-menu .q-item,
+.filter-select-menu .q-item--active,
+.filter-select-menu .q-item--highlighted {
+  color: #1b3a5c;
+}

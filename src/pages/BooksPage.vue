@@ -30,6 +30,7 @@
         class="new-book-button"
         label="+ Novo livro"
         unelevated
+        @click="showBookForm = true"
       />
     </section>
 
@@ -50,7 +51,8 @@
         :options="statusOptions"
         emit-value
         map-options
-        class="status-filter"
+        class="status-filter filter-select"
+        popup-content-class="filter-select-menu"
       />
     </section>
 
@@ -77,6 +79,80 @@
         </template>
       </q-table>
     </section>
+
+    <q-dialog v-model="showBookForm">
+      <q-card class="book-form">
+        <q-card-section class="form-header">
+          <div class="text-h6">Novo livro</div>
+
+          <q-btn
+            flat
+            round
+            dense
+            icon="close"
+            @click="showBookForm = false"
+          />
+        </q-card-section>
+
+        <q-card-section>
+          <q-form @submit.prevent="saveBook">
+            <q-input
+              v-model="bookForm.title"
+              label="Título"
+              outlined
+            />
+
+            <q-input
+              v-model="bookForm.author"
+              label="Autor"
+              outlined
+              class="q-mt-md"
+            />
+
+            <q-select
+              v-model="bookForm.publisher"
+              :options="publisherOptions"
+              label="Editora"
+              placeholder="Selecione uma editora"
+              outlined
+              class="q-mt-md filter-select"
+              popup-content-class="filter-select-menu"
+            />
+
+            <q-select
+              v-model="bookForm.status"
+              :options="bookStatusOptions"
+              label="Status"
+              outlined
+              class="q-mt-md filter-select"
+              popup-content-class="filter-select-menu"
+            />
+
+            <q-input
+              v-model="bookForm.observations"
+              label="Observações (opcional)"
+              type="textarea"
+              outlined
+              class="q-mt-md"
+            />
+
+            <div class="form-actions">
+              <q-btn
+                label="Cancelar"
+                flat
+                class="cancel-btn"
+                @click="showBookForm = false"
+              />
+
+              <q-btn
+                label="Salvar"
+                type="submit"
+              />
+            </div>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -85,6 +161,27 @@ import { ref } from 'vue';
 
 const search = ref('');
 const status = ref('all');
+const showBookForm = ref(false);
+
+const bookForm = ref({
+  title: '',
+  author: '',
+  publisher: null as string | null,
+  status: 'Disponível',
+  observations: '',
+});
+
+const publisherOptions = [
+  'Editora Horizonte',
+  'Editora Papiro',
+  'Editora Aurora',
+];
+
+const bookStatusOptions = ['Disponível', 'Indisponível'];
+
+function saveBook() {
+  showBookForm.value = false;
+}
 
 const statusOptions = [
   {
@@ -257,5 +354,42 @@ const columns = [
   padding: 15px;
   color: #444444;
   font-size: 13px;
+}
+
+.book-form {
+  width: 500px;
+  max-width: 90vw;
+  border-radius: 8px;
+}
+
+.form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #1b3a5c;
+}
+
+.book-form :deep(.q-field--outlined .q-field__control:before),
+.book-form :deep(.q-field--outlined .q-field__control:hover:before),
+.book-form :deep(.q-field--outlined .q-field__control:after) {
+  border-color: #1b3a5c;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.form-actions .q-btn:last-child {
+  background-color: #1b3a5c;
+  color: #ffffff;
+}
+
+.form-actions .cancel-btn {
+  background-color: #ffffff;
+  border: 1px solid #1b3a5c;
+  color: #1b3a5c;
 }
 </style>

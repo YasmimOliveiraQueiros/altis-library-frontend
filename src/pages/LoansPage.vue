@@ -28,6 +28,7 @@
         label="+ Novo aluguel"
         class="new-loan-btn"
         unelevated
+        @click="showLoanForm = true"
       />
     </section>
 
@@ -46,7 +47,8 @@
         :options="statusOptions"
         outlined
         dense
-        class="status-filter"
+        class="status-filter filter-select"
+        popup-content-class="filter-select-menu"
       />
     </section>
 
@@ -79,18 +81,118 @@
                 :options="actionOptions"
                 outlined
                 dense
-                class="action-select"
+                class="action-select filter-select"
+                popup-content-class="filter-select-menu"
               />
             </div>
           </q-td>
         </template>
       </q-table>
     </section>
+
+    <!-- Formulário de novo aluguel -->
+    <q-dialog v-model="showLoanForm">
+      <q-card class="loan-form">
+        <q-card-section class="form-header">
+          <div class="text-h6">Novo Aluguel</div>
+
+          <q-btn
+            flat
+            round
+            dense
+            icon="close"
+            @click="showLoanForm = false"
+          />
+        </q-card-section>
+
+        <q-card-section>
+          <q-form @submit.prevent="saveLoan">
+            <!-- Locatário -->
+            <q-input
+              v-model="form.tenant"
+              label="Locatário"
+              outlined
+            />
+
+            <!-- Livro -->
+            <q-select
+              v-model="form.book"
+              label="Livro"
+              :options="bookOptions"
+              outlined
+              class="q-mt-md filter-select"
+              popup-content-class="filter-select-menu"
+            />
+
+            <!-- Datas -->
+            <div class="date-fields">
+              <q-input
+                v-model="form.rentalDate"
+                label="Data do aluguel"
+                outlined
+                type="date"
+              />
+
+              <q-input
+                v-model="form.returnDate"
+                label="Data de devolução"
+                outlined
+                type="date"
+              />
+            </div>
+
+            <!-- Observações -->
+            <q-input
+              v-model="form.observations"
+              label="Observações"
+              outlined
+              type="textarea"
+              class="q-mt-md"
+            />
+
+            <!-- Botões -->
+            <div class="form-actions">
+              <q-btn
+                label="Cancelar"
+                flat
+                class="cancel-btn"
+                @click="showLoanForm = false"
+              />
+
+              <q-btn
+                label="Salvar"
+                type="submit"
+              />
+            </div>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+
+const showLoanForm = ref(false);
+
+const form = ref({
+  tenant: '',
+  book: null,
+  rentalDate: '',
+  returnDate: '',
+  observations: '',
+});
+
+const bookOptions = [
+  'Dom Casmurro',
+  'O Alquimista',
+  '1984',
+];
+
+function saveLoan() {
+  showLoanForm.value = false;
+}
 
 interface Loan {
   id: number;
@@ -102,6 +204,7 @@ interface Loan {
 }
 
 const search = ref('');
+
 const statusFilter = ref('Todos os status');
 
 const statusOptions = [
@@ -109,12 +212,14 @@ const statusOptions = [
   'Pendente',
   'Atrasado',
   'Devolvido',
+  'Devolvido C/A',
 ];
 
 const actionOptions = [
   'Pendente',
   'Atrasado',
   'Devolvido',
+  'Devolvido C/A',
 ];
 
 const loans = ref<Loan[]>([
@@ -362,6 +467,52 @@ function getStatusClass(status: string) {
   justify-content: center;
 }
 
+/* Formulário de novo aluguel */
+.loan-form {
+  width: 500px;
+  max-width: 90vw;
+  border-radius: 8px;
+  background-color: #ffffff;
+}
+
+.form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #1b3a5c;
+}
+
+.loan-form :deep(.q-field--outlined .q-field__control:before),
+.loan-form :deep(.q-field--outlined .q-field__control:hover:before),
+.loan-form :deep(.q-field--outlined .q-field__control:after) {
+  border-color: #1b3a5c;
+}
+
+.date-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.form-actions .q-btn:last-child {
+  background-color: #1b3a5c;
+  color: #ffffff;
+}
+
+.form-actions .cancel-btn {
+  background-color: #ffffff;
+  border: 1px solid #1b3a5c;
+  color: #1b3a5c;
+}
+
 @media (max-width: 700px) {
   .summary-section {
     flex-wrap: wrap;
@@ -379,6 +530,10 @@ function getStatusClass(status: string) {
 
   .status-filter {
     width: 100%;
+  }
+
+  .date-fields {
+    grid-template-columns: 1fr;
   }
 }
 </style>

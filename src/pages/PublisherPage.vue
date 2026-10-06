@@ -30,6 +30,7 @@
         label="+ Nova editora"
         class="new-publisher-btn"
         unelevated
+        @click="showPublisherForm = true"
       />
     </section>
 
@@ -57,6 +58,88 @@
         class="publisher-table"
       />
     </section>
+
+    <q-dialog v-model="showPublisherForm">
+      <q-card class="publisher-form">
+        <q-card-section class="form-header">
+          <div class="text-h6">Nova Editora</div>
+
+          <q-btn
+            flat
+            round
+            dense
+            icon="close"
+            @click="showPublisherForm = false"
+          />
+        </q-card-section>
+
+        <q-card-section>
+          <q-form @submit.prevent="savePublisher">
+            <q-input
+              v-model="form.name"
+              label="Nome da editora"
+              placeholder="Nome da editora"
+              outlined
+            />
+
+            <q-input
+              v-model="form.email"
+              label="E-mail"
+              placeholder="E-mail"
+              outlined
+              class="q-mt-md"
+            />
+
+            <q-input
+              v-model="form.cnpj"
+              label="CNPJ"
+              placeholder="00.000.000/0000-00"
+              outlined
+              class="q-mt-md"
+            />
+
+            <q-input
+              v-model="form.city"
+              label="Cidade"
+              placeholder="Cidade - UF"
+              outlined
+              class="q-mt-md"
+            />
+
+            <q-input
+              v-model="form.copies"
+              label="Exemplares"
+              type="number"
+              outlined
+              class="q-mt-md"
+            />
+
+            <q-select
+              v-model="form.status"
+              label="Status"
+              :options="publisherStatusOptions"
+              outlined
+              class="q-mt-md filter-select"
+              popup-content-class="filter-select-menu"
+            />
+
+            <div class="form-actions">
+              <q-btn
+                label="Cancelar"
+                flat
+                class="cancel-btn"
+                @click="showPublisherForm = false"
+              />
+
+              <q-btn
+                label="Salvar"
+                type="submit"
+              />
+            </div>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -64,6 +147,23 @@
 import { ref } from 'vue'
 
 const search = ref('')
+const showPublisherForm = ref(false)
+
+const form = ref({
+  name: '',
+  email: '',
+  cnpj: '',
+  city: '',
+  copies: 0,
+  status: 'Ativa',
+})
+
+const publisherStatusOptions = ['Ativa', 'Inativa']
+
+function savePublisher() {
+  showPublisherForm.value = false
+}
+
 const columns = [
   {
     name: 'name',
@@ -215,5 +315,42 @@ const columns = [
   border-bottom: 1px solid #eeeeee;
   color: #444444;
   font-size: 13px;
+}
+
+.publisher-form {
+  width: 500px;
+  max-width: 90vw;
+  border-radius: 8px;
+}
+
+.form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #1b3a5c;
+}
+
+.publisher-form :deep(.q-field--outlined .q-field__control:before),
+.publisher-form :deep(.q-field--outlined .q-field__control:hover:before),
+.publisher-form :deep(.q-field--outlined .q-field__control:after) {
+  border-color: #1b3a5c;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.form-actions .q-btn:last-child {
+  background-color: #1b3a5c;
+  color: #ffffff;
+}
+
+.form-actions .cancel-btn {
+  background-color: #ffffff;
+  border: 1px solid #1b3a5c;
+  color: #1b3a5c;
 }
 </style>
