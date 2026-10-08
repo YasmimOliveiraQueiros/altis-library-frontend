@@ -1,8 +1,6 @@
 <template>
   <q-header class="app-header">
-
     <q-toolbar>
-
       <q-btn
         flat
         dense
@@ -13,7 +11,6 @@
       />
 
       <div class="header-title">
-
         <div class="title">
           Altis+ Biblioteca
         </div>
@@ -21,21 +18,17 @@
         <div class="subtitle">
           {{ subtitle }}
         </div>
-
       </div>
 
       <q-space />
 
-      <div class="avatar">
-        LF
-      </div>
-
+      <ProfileMenu :is-admin="true" />
     </q-toolbar>
-
   </q-header>
 </template>
 
 <script setup lang="ts">
+import ProfileMenu from '@/components/layout/ProfileMenu/ProfileMenu.vue';
 defineProps<{
   subtitle: string;
 }>();
@@ -47,9 +40,9 @@ defineEmits<{
 
 <style scoped>
 .app-header {
-  background-color: #FFFFFF;
-  color: #1B3A5C;
-  border-bottom: 1px solid #BDBDBD;
+  background-color: #ffffff;
+  color: #1b3a5c;
+  border-bottom: 1px solid #bdbdbd;
   box-shadow: none;
 }
 
@@ -70,18 +63,5 @@ defineEmits<{
 .subtitle {
   font-size: 14px;
   margin-top: 2px;
-}
-
-.avatar {
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  background-color: #1B3A5C;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 20px;
 }
 </style>
