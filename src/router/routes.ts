@@ -13,10 +13,17 @@ const routes: RouteRecordRaw[] = [
     ],
   },
 
+
+  {
+    path: '/login',
+    component: () => import('@/pages/Auth/Login.vue'),
+  },
+
   {
     path: '/:catchAll(.*)*',
     component: () => import('@/pages/ErrorNotFound.vue'),
   },
+
 ];
 
 export default routes;
