@@ -9,14 +9,6 @@
       <q-menu>
         <q-list class="profile-list">
           <q-item 
-           v-if="!isAdmin"
-           clickable>
-            <q-item-section>
-              {{ t('profile.languageLabel') }}
-            </q-item-section>
-          </q-item>
-
-          <q-item 
           clickable
           @click="showLanguageDialog = true">
             <q-item-section>

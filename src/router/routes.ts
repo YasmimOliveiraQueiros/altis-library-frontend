@@ -18,6 +18,16 @@ const routes: RouteRecordRaw[] = [
     path: '/login',
     component: () => import('@/pages/Auth/Login.vue'),
   },
+  
+  {
+    path: '/cadastro',
+    component: () => import('@/pages/Auth/Register.vue'),
+  },
+
+  {
+    path: '/recuperar-senha',
+    component: () => import('@/pages/Auth/PasswordRecovery.vue'),
+  },
 
   {
     path: '/:catchAll(.*)*',

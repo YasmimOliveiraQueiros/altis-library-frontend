@@ -1,7 +1,11 @@
-
 import { defineStore } from 'pinia';
 import { authService } from '@/services/AuthService';
-import type { LoginCredentials } from '@/services/AuthService';
+import type {
+  LoginCredentials,
+  PasswordRecoveryReset,
+  PasswordRecoveryVerification,
+  RegisterCredentials,
+} from '@/services/AuthService';
 
 interface AuthState {
   token: string | null;
@@ -27,6 +31,18 @@ export const useAuthStore = defineStore('auth', {
       this.role = response.role;
 
       return response;
+    },
+
+    async register(data: RegisterCredentials) {
+      return authService.register(data);
+    },
+
+    async verifyPasswordRecovery(data: PasswordRecoveryVerification) {
+      return authService.verifyPasswordRecovery(data);
+    },
+
+    async resetPassword(data: PasswordRecoveryReset) {
+      return authService.resetPassword(data);
     },
 
     clearSession() {
