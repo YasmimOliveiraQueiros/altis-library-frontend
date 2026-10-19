@@ -18,7 +18,7 @@
 
           <q-separator />
 
-          <q-item clickable>
+          <q-item clickable @click="logout">
             <q-item-section>
               {{ t('profile.logout') }}
             </q-item-section>
@@ -44,8 +44,18 @@
 import { ref } from 'vue';
 import LanguageDialog from './LanguageDialog.vue';
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/Auth/AuthStore';
 
 const { t } = useI18n();
+
+const router = useRouter();
+const authStore = useAuthStore();
+
+function logout() {
+  authStore.clearSession();
+  void router.replace('/login');
+}
 
 defineProps<{
   isAdmin: boolean;

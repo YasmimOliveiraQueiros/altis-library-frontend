@@ -14,8 +14,8 @@ interface AuthState {
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
-    token: null,
-    role: null,
+    token: localStorage.getItem('token'),
+    role: localStorage.getItem('role') as AuthState['role'],
   }),
 
   getters: {
@@ -29,6 +29,8 @@ export const useAuthStore = defineStore('auth', {
 
       this.token = response.token;
       this.role = response.role;
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('role', response.role);
 
       return response;
     },
@@ -48,6 +50,9 @@ export const useAuthStore = defineStore('auth', {
     clearSession() {
       this.token = null;
       this.role = null;
+
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
     },
   },
 });
