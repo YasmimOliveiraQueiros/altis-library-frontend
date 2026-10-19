@@ -3,9 +3,14 @@ import type { RouteRecordRaw } from 'vue-router';
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
+    redirect: '/login',
+  },
+
+  {
+    path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
     children: [
-      { path: '', component: () => import('@/pages/DashboardPage.vue') },
+      { path: 'dashboard', component: () => import('@/pages/DashboardPage.vue') },
       { path: 'editoras', component: () => import('@/pages/PublisherPage.vue') },
       { path: 'livros', component: () => import('@/pages/BooksPage.vue') },
       { path: 'alugueis', component: () => import('@/pages/LoansPage.vue') },
@@ -13,12 +18,11 @@ const routes: RouteRecordRaw[] = [
     ],
   },
 
-
   {
     path: '/login',
     component: () => import('@/pages/Auth/Login.vue'),
   },
-  
+
   {
     path: '/cadastro',
     component: () => import('@/pages/Auth/Register.vue'),
@@ -33,7 +37,6 @@ const routes: RouteRecordRaw[] = [
     path: '/:catchAll(.*)*',
     component: () => import('@/pages/ErrorNotFound.vue'),
   },
-
 ];
 
 export default routes;

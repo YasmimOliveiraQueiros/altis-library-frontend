@@ -11,7 +11,7 @@
               Ativos
             </div>
 
-            <div class="card-value">0</div>
+            <div class="card-value"> {{ totalAtivos }}</div>
           </q-card-section>
         </q-card>
 
@@ -22,7 +22,7 @@
               Inativos
             </div>
 
-            <div class="card-value">0</div>
+            <div class="card-value"> {{ totalInativos }}</div>
           </q-card-section>
         </q-card>
 
@@ -33,7 +33,7 @@
               Total
             </div>
 
-            <div class="card-value">0</div>
+            <div class="card-value"> {{ totalUsuarios }}</div>
           </q-card-section>
         </q-card>
 
@@ -49,6 +49,7 @@
         dense
         placeholder="Buscar por nome ou email"
         class="campo-busca"
+        @keyup.enter="carregarUsuarios"
       />
 
       <q-select
@@ -65,25 +66,45 @@
     <section class="tabela">
       <q-table
         flat
-        :rows="usuarios"
+        :rows="usuariosFiltrados"
         :columns="colunas"
         row-key="id"
+        :loading="carregando"
         hide-pagination
         :rows-per-page-options="[0]"
-        no-data-label="Dados serão carregados pelo backend."
-        class="user-table"
-      />
+        :no-data-label="
+          erro 
+          ? erro 
+          : 'Nenhum usuário encontrado.'"
+        class="user-table">
+      
+      <template #body-cell-acao="props">
+        <q-td :props="props">
+          <q-btn
+          outline
+          dense
+          no-caps
+          :label="props.row.active ? 'Inativar' : 'Ativar'"
+          :loading="carregando"
+          @click="alternarStatus(props.row)"
+          />
+        </q-td>
+      </template>
+     </q-table>
     </section>
-  </q-page>
-
-  
+  </q-page>  
 </template>
 
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import type { QTableColumn } from 'quasar';
 
+import { ref, onMounted, computed } from 'vue';
+import type { QTableColumn } from 'quasar';
+import { UserService } from '@/services/UserService';
+import type { UserResponse } from '@/types/User';
+import { useQuasar } from 'quasar';
+
+const $q = useQuasar();
 const campoBusca = ref('');
 const filtroStatus = ref('Todos os status');
 
@@ -93,14 +114,115 @@ const opcoesStatus = [
   'Inativo',
 ];
 
+const usuarios = ref<UserResponse[]>([]);
 
-const usuarios = ref([]);
+const usuariosFiltrados = computed(() => {
+  if (filtroStatus.value === 'Ativo') {
+    return usuarios.value.filter((usuario) => usuario.active);
+  }
+
+  if (filtroStatus.value === 'Inativo') {
+    return usuarios.value.filter((usuario) => !usuario.active);
+  }
+
+  return usuarios.value;
+});
+
+const totalAtivos = ref(0);
+const totalInativos = ref(0);
+const totalUsuarios = ref(0);
+
+const carregando = ref(false);
+const erro = ref('');
+
+
+async function carregarUsuarios() {
+  carregando.value = true;
+  erro.value = '';
+
+  try {
+    const tamanhoPagina = 100;
+    let pagina = 0;
+    let totalPaginas = 1;
+    let ativos = 0;
+    let inativos = 0;
+    let total = 0;
+
+    do {
+      const resposta = await UserService.getUsers({
+        page: pagina,
+        size: tamanhoPagina,
+      });
+
+      total = resposta.totalElements;
+      totalPaginas = resposta.totalPages;
+
+      for (const usuario of resposta.content) {
+        if (usuario.active) {
+          ativos++;
+        } else {
+          inativos++;
+        }
+      }
+
+      pagina++;
+    } while (pagina < totalPaginas);
+
+    totalAtivos.value = ativos;
+    totalInativos.value = inativos;
+    totalUsuarios.value = total;
+
+    const respostaTabela = await UserService.getUsers({
+      search: campoBusca.value.trim(),
+      page: 0,
+      size: 10,
+    });
+
+    usuarios.value = respostaTabela.content;
+  } catch (error) {
+    console.error('Erro ao carregar usuários:', error);
+    erro.value = 'Não foi possível carregar os usuários.';
+  } finally {
+    carregando.value = false;
+  }
+}
+
+async function alternarStatus(usuario: UserResponse) {
+  const novoStatus = !usuario.active;
+
+  try {
+    await UserService.updateStatus(usuario.id, novoStatus);
+    await carregarUsuarios();
+
+    $q.notify({
+      type: 'positive',
+      message: novoStatus
+      ? 'Usuário ativado com sucesso.'
+      : 'Usuário inativado com sucesso.',
+      position: 'top-right',
+      timeout: 3000,
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar status do usuário:', error);
+
+    $q.notify({
+      type: 'negative',
+      message: 'Não foi possível atualizar o status do usuário.',
+      position: 'top-right',
+      timeout: 3000,
+    });
+  }
+}
+
+onMounted(() => {
+  void carregarUsuarios();
+});
 
 const colunas: QTableColumn[] = [
   {
     name: 'nome',
     label: 'Nome',
-    field: 'nome',
+    field: 'name',
     align: 'left',
   },
   {
@@ -112,7 +234,7 @@ const colunas: QTableColumn[] = [
   {
     name: 'telefone',
     label: 'Telefone',
-    field: 'telefone',
+    field: 'phone',
     align: 'left',
   },
   {
@@ -124,7 +246,7 @@ const colunas: QTableColumn[] = [
   {
     name: 'status',
     label: 'Status',
-    field: 'status',
+    field: (row: UserResponse) => row.active ? 'Ativo' : 'Inativo',
     align: 'center',
   },
   {
@@ -134,6 +256,7 @@ const colunas: QTableColumn[] = [
     align: 'center',
   },
 ];
+
 </script>
 
 
