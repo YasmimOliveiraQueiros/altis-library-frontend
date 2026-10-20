@@ -251,7 +251,7 @@ function openEditPublisher(publisher: PublisherResponse) {
     email: publisher.email,
     cnpj: publisher.cnpj,
     city: `${publisher.city} - ${publisher.state}`,
-    copies: null,
+    copies: publisher.bookCount,
     status: publisher.status === 'ACTIVE' ? 'Ativa' : 'Inativa',
   };
   publisherFormError.value = '';

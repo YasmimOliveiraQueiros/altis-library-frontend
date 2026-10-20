@@ -1,7 +1,7 @@
 <template>
   <q-dialog v-model="dialog" :persistent="loading">
     <q-card class="publisher-form">
-      <q-card-section class="form-header">
+      <q-card-section class="form-header q-pt-lg q-px-lg q-pb-sm">
         <div class="text-h6">
           {{ mode === 'edit' ? 'Editar editora' : 'Nova Editora' }}
         </div>
@@ -16,67 +16,71 @@
         />
       </q-card-section>
 
-      <q-card-section>
+      <q-card-section class="q-px-lg q-pt-sm q-pb-lg">
         <q-form @submit.prevent="handleSave">
-          <q-input
-            v-model="form.name"
-            label="Nome da editora"
-            placeholder="Nome da editora"
-            outlined
-            :rules="[(value) => !!String(value ?? '').trim() || 'Informe o nome da editora']"
-          />
+          <div class="publisher-fields">
+            <q-input
+              v-model="form.name"
+              label="Nome da editora"
+              placeholder="Nome da editora"
+              outlined
+              hide-bottom-space
+              :rules="[(value) => !!String(value ?? '').trim() || 'Informe o nome da editora']"
+            />
 
-          <q-input
-            v-model="form.email"
-            label="E-mail"
-            placeholder="E-mail"
-            outlined
-            class="q-mt-md"
-            :rules="[
-              (value) => !!String(value ?? '').trim() || 'Informe o e-mail',
-              (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value ?? '')) || 'Informe um e-mail válido',
-            ]"
-          />
+            <q-input
+              v-model="form.email"
+              label="E-mail"
+              placeholder="E-mail"
+              outlined
+              hide-bottom-space
+              :rules="[
+                (value) => !!String(value ?? '').trim() || 'Informe o e-mail',
+                (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value ?? '')) || 'Informe um e-mail válido',
+              ]"
+            />
 
-          <q-input
-            v-model="form.cnpj"
-            label="CNPJ"
-            placeholder="00.000.000/0000-00"
-            outlined
-            class="q-mt-md"
-            :rules="[(value) => !!String(value ?? '').trim() || 'Informe o CNPJ']"
-          />
+            <q-input
+              v-model="form.cnpj"
+              label="CNPJ"
+              placeholder="00.000.000/0000-00"
+              outlined
+              hide-bottom-space
+              :rules="[(value) => !!String(value ?? '').trim() || 'Informe o CNPJ']"
+            />
 
-          <q-input
-            v-model="form.city"
-            label="Cidade"
-            placeholder="Cidade - UF"
-            outlined
-            class="q-mt-md"
-            :rules="[
-              (value) => !!String(value ?? '').trim() || 'Informe a cidade e a UF',
-              (value) => /^.+\s*-\s*[A-Za-z]{2}$/.test(String(value ?? '').trim()) || 'Informe no formato Cidade - UF',
-            ]"
-          />
+            <q-input
+              v-model="form.city"
+              label="Cidade"
+              placeholder="Cidade - UF"
+              outlined
+              hide-bottom-space
+              :rules="[
+                (value) => !!String(value ?? '').trim() || 'Informe a cidade e a UF',
+                (value) => /^.+\s*-\s*[A-Za-z]{2}$/.test(String(value ?? '').trim()) || 'Informe no formato Cidade - UF',
+              ]"
+            />
 
-          <q-input
-            v-model="form.copies"
-            label="Exemplares"
-            type="number"
-            outlined
-            class="q-mt-md"
-            :disable="loading || mode === 'edit'"
-          />
+            <q-input
+              v-model="form.copies"
+              label="Livros cadastrados"
+              type="number"
+              outlined
+              hide-bottom-space
+              readonly
+            />
 
-          <q-select
-            v-model="form.status"
-            label="Status"
-            :options="publisherStatusOptions"
-            outlined
-            class="q-mt-md filter-select"
-            popup-content-class="filter-select-menu"
-            :disable="loading || mode === 'edit'"
-          />
+            <q-select
+              v-model="form.status"
+              label="Status"
+              :options="publisherStatusOptions"
+              outlined
+              hide-bottom-space
+              class="filter-select"
+              popup-content-class="filter-select-menu"
+              :disable="loading || mode === 'edit'"
+            />
+          </div>
 
           <div
             v-if="errorMessage"
@@ -184,6 +188,12 @@ function handleSave() {
   width: 500px;
   max-width: 90vw;
   border-radius: 8px;
+}
+
+.publisher-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .form-header {
