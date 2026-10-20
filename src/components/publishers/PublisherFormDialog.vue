@@ -6,14 +6,7 @@
           {{ mode === 'edit' ? 'Editar editora' : 'Nova Editora' }}
         </div>
 
-        <q-btn
-          flat
-          round
-          dense
-          icon="close"
-          :disable="loading"
-          @click="closeDialog"
-        />
+        <q-btn flat round dense icon="close" :disable="loading" @click="closeDialog" />
       </q-card-section>
 
       <q-card-section class="q-px-lg q-pt-sm q-pb-lg">
@@ -36,7 +29,9 @@
               hide-bottom-space
               :rules="[
                 (value) => !!String(value ?? '').trim() || 'Informe o e-mail',
-                (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value ?? '')) || 'Informe um e-mail válido',
+                (value) =>
+                  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value ?? '')) ||
+                  'Informe um e-mail válido',
               ]"
             />
 
@@ -57,7 +52,9 @@
               hide-bottom-space
               :rules="[
                 (value) => !!String(value ?? '').trim() || 'Informe a cidade e a UF',
-                (value) => /^.+\s*-\s*[A-Za-z]{2}$/.test(String(value ?? '').trim()) || 'Informe no formato Cidade - UF',
+                (value) =>
+                  /^.+\s*-\s*[A-Za-z]{2}$/.test(String(value ?? '').trim()) ||
+                  'Informe no formato Cidade - UF',
               ]"
             />
 
@@ -82,11 +79,7 @@
             />
           </div>
 
-          <div
-            v-if="errorMessage"
-            class="form-error text-negative"
-            role="alert"
-          >
+          <div v-if="errorMessage" class="form-error text-negative" role="alert">
             {{ errorMessage }}
           </div>
 
@@ -99,12 +92,7 @@
               @click="cancelDialog"
             />
 
-            <q-btn
-              label="Salvar"
-              type="submit"
-              :loading="loading"
-              :disable="loading"
-            />
+            <q-btn label="Salvar" type="submit" :loading="loading" :disable="loading" />
           </div>
         </q-form>
       </q-card-section>
@@ -124,25 +112,28 @@ interface PublisherFormData {
   status: 'Ativa' | 'Inativa';
 }
 
-const props = withDefaults(defineProps<{
-  modelValue: boolean;
-  mode?: 'create' | 'edit';
-  initialData?: PublisherFormData;
-  loading?: boolean;
-  errorMessage?: string;
-}>(), {
-  mode: 'create',
-  loading: false,
-  errorMessage: '',
-  initialData: () => ({
-    name: '',
-    email: '',
-    cnpj: '',
-    city: '',
-    copies: 0,
-    status: 'Ativa',
-  }),
-});
+const props = withDefaults(
+  defineProps<{
+    modelValue: boolean;
+    mode?: 'create' | 'edit';
+    initialData?: PublisherFormData;
+    loading?: boolean;
+    errorMessage?: string;
+  }>(),
+  {
+    mode: 'create',
+    loading: false,
+    errorMessage: '',
+    initialData: () => ({
+      name: '',
+      email: '',
+      cnpj: '',
+      city: '',
+      copies: 0,
+      status: 'Ativa',
+    }),
+  },
+);
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];

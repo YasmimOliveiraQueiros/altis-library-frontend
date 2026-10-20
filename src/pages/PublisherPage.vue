@@ -53,11 +53,7 @@
 
     <!-- Tabela -->
     <section class="table-section">
-      <div
-        v-if="errorMessage"
-        class="text-negative q-pa-sm"
-        role="alert"
-      >
+      <div v-if="errorMessage" class="text-negative q-pa-sm" role="alert">
         {{ errorMessage }}
       </div>
 
@@ -108,10 +104,7 @@
       @cancel="publisherFormError = ''"
     />
 
-    <q-dialog
-      v-model="showDeleteConfirmation"
-      :persistent="deletingPublisherId !== null"
-    >
+    <q-dialog v-model="showDeleteConfirmation" :persistent="deletingPublisherId !== null">
       <q-card class="publisher-delete-dialog">
         <q-card-section class="delete-dialog-header">
           <div class="text-h6">Excluir editora</div>
@@ -119,12 +112,9 @@
 
         <q-card-section>
           Tem certeza que deseja excluir a editora
-          <strong>{{ pendingDeletePublisher?.name }}</strong>?
-          <div
-            v-if="deleteErrorMessage"
-            class="delete-error text-negative"
-            role="alert"
-          >
+          <strong>{{ pendingDeletePublisher?.name }}</strong
+          >?
+          <div v-if="deleteErrorMessage" class="delete-error text-negative" role="alert">
             {{ deleteErrorMessage }}
           </div>
         </q-card-section>
@@ -302,9 +292,7 @@ async function handlePublisherFormSave(formData: PublisherFormSubmission) {
     showPublisherForm.value = false;
     $q.notify({
       type: 'positive',
-      message: isEditing
-        ? 'Editora atualizada com sucesso.'
-        : 'Editora cadastrada com sucesso.',
+      message: isEditing ? 'Editora atualizada com sucesso.' : 'Editora cadastrada com sucesso.',
       position: 'top-right',
       timeout: 3000,
     });
@@ -433,7 +421,7 @@ const columns: QTableColumn[] = [
     field: 'actions',
     align: 'center' as const,
   },
-]
+];
 </script>
 
 <style scoped>
@@ -564,5 +552,4 @@ const columns: QTableColumn[] = [
 .delete-error {
   margin-top: 12px;
 }
-
 </style>
