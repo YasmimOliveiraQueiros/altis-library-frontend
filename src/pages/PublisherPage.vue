@@ -10,18 +10,23 @@
           </div>
 
           <div class="summary-value">
-            0
+            {{ totalPublishers }}
           </div>
         </q-card>
 
-        <q-card flat bordered class="summary-card">
+        <q-card
+          flat
+          bordered
+          class="summary-card"
+          title="Soma dos livros vinculados às editoras desta página carregada"
+        >
           <div class="summary-label">
             <span class="status-dot livros"></span>
             Livros vinculados
           </div>
 
           <div class="summary-value">
-            0
+            {{ booksLinkedOnLoadedPage }}
           </div>
         </q-card>
       </div>
@@ -30,7 +35,7 @@
         label="+ Nova editora"
         class="new-publisher-btn"
         unelevated
-        @click="showPublisherForm = true"
+        @click="openCreatePublisher"
       />
     </section>
 
@@ -42,129 +47,349 @@
         dense
         placeholder="Buscar por nome ou e-mail"
         class="search-input"
+        @keydown.enter.prevent="searchPublishers"
       />
     </section>
 
     <!-- Tabela -->
     <section class="table-section">
+      <div v-if="errorMessage" class="text-negative q-pa-sm" role="alert">
+        {{ errorMessage }}
+      </div>
+
       <q-table
         flat
-        :rows="[]"
+        :rows="publisherRows"
         :columns="columns"
         row-key="id"
+        :loading="loading"
         hide-pagination
         :rows-per-page-options="[0]"
         no-data-label="Dados serão carregados pelo backend."
         class="publisher-table"
-      />
+      >
+        <template #body-cell-actions="props">
+          <q-td :props="props">
+            <q-btn
+              flat
+              round
+              dense
+              icon="edit"
+              aria-label="Editar editora"
+              :disable="savingPublisher"
+              @click="openEditPublisher(props.row)"
+            />
+            <q-btn
+              flat
+              round
+              dense
+              icon="delete"
+              color="negative"
+              aria-label="Excluir editora"
+              :disable="savingPublisher || deletingPublisherId !== null"
+              @click="openDeleteConfirmation(props.row)"
+            />
+          </q-td>
+        </template>
+      </q-table>
     </section>
 
-    <q-dialog v-model="showPublisherForm">
-      <q-card class="publisher-form">
-        <q-card-section class="form-header">
-          <div class="text-h6">Nova Editora</div>
+    <PublisherFormDialog
+      v-model="showPublisherForm"
+      :mode="formMode"
+      :initial-data="initialFormData"
+      :loading="savingPublisher"
+      :error-message="publisherFormError"
+      @save="handlePublisherFormSave"
+      @cancel="publisherFormError = ''"
+    />
 
-          <q-btn
-            flat
-            round
-            dense
-            icon="close"
-            @click="showPublisherForm = false"
-          />
+    <q-dialog v-model="showDeleteConfirmation" :persistent="deletingPublisherId !== null">
+      <q-card class="publisher-delete-dialog">
+        <q-card-section class="delete-dialog-header">
+          <div class="text-h6">Excluir editora</div>
         </q-card-section>
 
         <q-card-section>
-          <q-form @submit.prevent="savePublisher">
-            <q-input
-              v-model="form.name"
-              label="Nome da editora"
-              placeholder="Nome da editora"
-              outlined
-            />
-
-            <q-input
-              v-model="form.email"
-              label="E-mail"
-              placeholder="E-mail"
-              outlined
-              class="q-mt-md"
-            />
-
-            <q-input
-              v-model="form.cnpj"
-              label="CNPJ"
-              placeholder="00.000.000/0000-00"
-              outlined
-              class="q-mt-md"
-            />
-
-            <q-input
-              v-model="form.city"
-              label="Cidade"
-              placeholder="Cidade - UF"
-              outlined
-              class="q-mt-md"
-            />
-
-            <q-input
-              v-model="form.copies"
-              label="Exemplares"
-              type="number"
-              outlined
-              class="q-mt-md"
-            />
-
-            <q-select
-              v-model="form.status"
-              label="Status"
-              :options="publisherStatusOptions"
-              outlined
-              class="q-mt-md filter-select"
-              popup-content-class="filter-select-menu"
-            />
-
-            <div class="form-actions">
-              <q-btn
-                label="Cancelar"
-                flat
-                class="cancel-btn"
-                @click="showPublisherForm = false"
-              />
-
-              <q-btn
-                label="Salvar"
-                type="submit"
-              />
-            </div>
-          </q-form>
+          Tem certeza que deseja excluir a editora
+          <strong>{{ pendingDeletePublisher?.name }}</strong
+          >?
+          <div v-if="deleteErrorMessage" class="delete-error text-negative" role="alert">
+            {{ deleteErrorMessage }}
+          </div>
         </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn
+            flat
+            label="Cancelar"
+            :disable="deletingPublisherId !== null"
+            @click="cancelDeleteConfirmation"
+          />
+          <q-btn
+            unelevated
+            color="negative"
+            label="Excluir"
+            :loading="deletingPublisherId === pendingDeletePublisher?.id"
+            :disable="deletingPublisherId !== null"
+            @click="confirmDeletePublisher"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue';
+import { PublisherService } from '@/services/PublisherService';
+import type { PublisherPayload, PublisherResponse, PublisherStatus } from '@/types/Publisher';
+import PublisherFormDialog from '@/components/publishers/PublisherFormDialog.vue';
+import { useQuasar } from 'quasar';
+import type { QTableColumn } from 'quasar';
 
-const search = ref('')
-const showPublisherForm = ref(false)
+interface PublisherFormSubmission {
+  name: string;
+  email: string;
+  cnpj: string;
+  city: string;
+  copies: number | null;
+  status: 'Ativa' | 'Inativa';
+}
 
-const form = ref({
+const $q = useQuasar();
+const search = ref('');
+const showPublisherForm = ref(false);
+const formMode = ref<'create' | 'edit'>('create');
+const selectedPublisherId = ref<number | null>(null);
+const initialFormData = ref<PublisherFormSubmission>({
   name: '',
   email: '',
   cnpj: '',
   city: '',
   copies: 0,
   status: 'Ativa',
-})
+});
+const publisherRows = ref<PublisherResponse[]>([]);
+const totalPublishers = ref(0);
+const loading = ref(false);
+const errorMessage = ref('');
+const savingPublisher = ref(false);
+const publisherFormError = ref('');
+const pendingDeletePublisher = ref<PublisherResponse | null>(null);
+const showDeleteConfirmation = ref(false);
+const deletingPublisherId = ref<number | null>(null);
+const deleteErrorMessage = ref('');
 
-const publisherStatusOptions = ['Ativa', 'Inativa']
+const booksLinkedOnLoadedPage = computed(() =>
+  publisherRows.value.reduce((total, publisher) => total + (publisher.bookCount ?? 0), 0),
+);
 
-function savePublisher() {
-  showPublisherForm.value = false
+function formatPublisherStatus(value: PublisherStatus): string {
+  if (value === 'ACTIVE') return 'Ativa';
+  if (value === 'INACTIVE') return 'Inativa';
+
+  return value;
 }
 
-const columns = [
+async function loadPublishers(searchTerm = '') {
+  loading.value = true;
+  errorMessage.value = '';
+
+  try {
+    const searchText = searchTerm.trim();
+    const response = searchText
+      ? await PublisherService.getPublishers({ search: searchText })
+      : await PublisherService.getPublishers();
+    const publishers = response.content ?? [];
+
+    publisherRows.value = publishers;
+    totalPublishers.value = response.totalElements;
+  } catch {
+    errorMessage.value = 'Não foi possível carregar as editoras. Tente novamente.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+function searchPublishers() {
+  void loadPublishers(search.value);
+}
+
+onMounted(loadPublishers);
+
+function openCreatePublisher() {
+  formMode.value = 'create';
+  selectedPublisherId.value = null;
+  initialFormData.value = {
+    name: '',
+    email: '',
+    cnpj: '',
+    city: '',
+    copies: 0,
+    status: 'Ativa',
+  };
+  publisherFormError.value = '';
+  showPublisherForm.value = true;
+}
+
+function openEditPublisher(publisher: PublisherResponse) {
+  formMode.value = 'edit';
+  selectedPublisherId.value = publisher.id;
+  initialFormData.value = {
+    name: publisher.name,
+    email: publisher.email,
+    cnpj: publisher.cnpj,
+    city: `${publisher.city} - ${publisher.state}`,
+    copies: publisher.bookCount,
+    status: publisher.status === 'ACTIVE' ? 'Ativa' : 'Inativa',
+  };
+  publisherFormError.value = '';
+  showPublisherForm.value = true;
+}
+
+async function handlePublisherFormSave(formData: PublisherFormSubmission) {
+  if (savingPublisher.value) return;
+
+  const isEditing = formMode.value === 'edit';
+  const publisherId = selectedPublisherId.value;
+  if (isEditing && publisherId === null) {
+    publisherFormError.value = 'Não foi possível identificar a editora para atualização.';
+    return;
+  }
+
+  const cityState = formData.city.trim().match(/^(.+?)\s*-\s*([A-Za-z]{2})$/);
+  if (!cityState) {
+    publisherFormError.value = 'Informe a cidade e a UF no formato Cidade - UF.';
+    return;
+  }
+
+  const city = cityState[1]?.trim();
+  const state = cityState[2]?.toUpperCase();
+  if (!city || !state) {
+    publisherFormError.value = 'Informe a cidade e a UF no formato Cidade - UF.';
+    return;
+  }
+
+  const payload: PublisherPayload = {
+    name: formData.name.trim(),
+    email: formData.email.trim(),
+    cnpj: formData.cnpj.trim(),
+    city,
+    state,
+  };
+
+  savingPublisher.value = true;
+  publisherFormError.value = '';
+
+  try {
+    if (isEditing && publisherId !== null) {
+      await PublisherService.updatePublisher(publisherId, payload);
+    } else {
+      await PublisherService.createPublisher(payload);
+    }
+
+    showPublisherForm.value = false;
+    $q.notify({
+      type: 'positive',
+      message: isEditing ? 'Editora atualizada com sucesso.' : 'Editora cadastrada com sucesso.',
+      position: 'top-right',
+      timeout: 3000,
+    });
+    await loadPublishers(search.value);
+  } catch {
+    publisherFormError.value = isEditing
+      ? 'Não foi possível atualizar a editora. Verifique os dados e tente novamente.'
+      : 'Não foi possível cadastrar a editora. Verifique os dados e tente novamente.';
+  } finally {
+    savingPublisher.value = false;
+  }
+}
+
+function openDeleteConfirmation(publisher: PublisherResponse) {
+  if (deletingPublisherId.value !== null || savingPublisher.value) return;
+
+  if (publisher.bookCount !== 0) {
+    const hasKnownLinkedBooks =
+      typeof publisher.bookCount === 'number' &&
+      Number.isFinite(publisher.bookCount) &&
+      publisher.bookCount > 0;
+
+    $q.notify({
+      type: 'negative',
+      message: hasKnownLinkedBooks
+        ? `Esta editora não pode ser excluída porque possui ${publisher.bookCount} livro(s) vinculado(s).`
+        : 'Não foi possível confirmar se esta editora possui livros vinculados. A exclusão foi bloqueada.',
+      position: 'top-right',
+      timeout: 4000,
+    });
+    return;
+  }
+
+  pendingDeletePublisher.value = publisher;
+  deleteErrorMessage.value = '';
+  showDeleteConfirmation.value = true;
+}
+
+function cancelDeleteConfirmation() {
+  if (deletingPublisherId.value !== null) return;
+
+  showDeleteConfirmation.value = false;
+  pendingDeletePublisher.value = null;
+  deleteErrorMessage.value = '';
+}
+
+function getDeleteErrorMessage(error: unknown): string {
+  let backendMessage = '';
+
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = error.response;
+    if (response && typeof response === 'object' && 'data' in response) {
+      const data = response.data;
+      if (typeof data === 'string') {
+        backendMessage = data;
+      } else if (data && typeof data === 'object') {
+        const details = data as Record<string, unknown>;
+        backendMessage = [details.message, details.detail, details.error]
+          .filter((value): value is string => typeof value === 'string')
+          .join(' ');
+      }
+    }
+  }
+
+  if (/livros?|books?|vinculad|associad|empr[eé]stim/i.test(backendMessage)) {
+    return 'Não foi possível excluir esta editora porque há livros vinculados. Remova ou reassocie esses livros e tente novamente.';
+  }
+
+  return 'Não foi possível excluir a editora. Verifique os dados e tente novamente.';
+}
+
+async function confirmDeletePublisher() {
+  const publisher = pendingDeletePublisher.value;
+  if (!publisher || deletingPublisherId.value !== null) return;
+
+  deletingPublisherId.value = publisher.id;
+  deleteErrorMessage.value = '';
+
+  try {
+    await PublisherService.deletePublisher(publisher.id);
+    showDeleteConfirmation.value = false;
+    pendingDeletePublisher.value = null;
+    $q.notify({
+      type: 'positive',
+      message: 'Editora excluída com sucesso.',
+      position: 'top-right',
+      timeout: 3000,
+    });
+    await loadPublishers(search.value);
+  } catch (error) {
+    deleteErrorMessage.value = getDeleteErrorMessage(error);
+  } finally {
+    deletingPublisherId.value = null;
+  }
+}
+
+const columns: QTableColumn[] = [
   {
     name: 'name',
     label: 'Nome',
@@ -180,7 +405,7 @@ const columns = [
   {
     name: 'books',
     label: 'Livros cadastrados',
-    field: 'books',
+    field: 'bookCount',
     align: 'center' as const,
   },
   {
@@ -188,6 +413,7 @@ const columns = [
     label: 'Status',
     field: 'status',
     align: 'center' as const,
+    format: formatPublisherStatus,
   },
   {
     name: 'actions',
@@ -195,7 +421,7 @@ const columns = [
     field: 'actions',
     align: 'center' as const,
   },
-]
+];
 </script>
 
 <style scoped>
@@ -206,7 +432,6 @@ const columns = [
 }
 
 /* Parte superior */
-
 .page-top {
   display: flex;
   flex-wrap: wrap;
@@ -264,7 +489,6 @@ const columns = [
 }
 
 /* Botão */
-
 .new-publisher-btn {
   width: 130px;
   height: 80px;
@@ -276,7 +500,6 @@ const columns = [
 }
 
 /* Pesquisa */
-
 .search-section {
   display: flex;
   align-items: center;
@@ -289,7 +512,6 @@ const columns = [
 }
 
 /* Tabela */
-
 .table-section {
   width: 100%;
   min-height: 250px;
@@ -317,40 +539,17 @@ const columns = [
   font-size: 13px;
 }
 
-.publisher-form {
-  width: 500px;
+.publisher-delete-dialog {
+  width: 420px;
   max-width: 90vw;
   border-radius: 8px;
 }
 
-.form-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.delete-dialog-header {
   color: #1b3a5c;
 }
 
-.publisher-form :deep(.q-field--outlined .q-field__control:before),
-.publisher-form :deep(.q-field--outlined .q-field__control:hover:before),
-.publisher-form :deep(.q-field--outlined .q-field__control:after) {
-  border-color: #1b3a5c;
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 24px;
-}
-
-.form-actions .q-btn:last-child {
-  background-color: #1b3a5c;
-  color: #ffffff;
-}
-
-.form-actions .cancel-btn {
-  background-color: #ffffff;
-  border: 1px solid #1b3a5c;
-  color: #1b3a5c;
+.delete-error {
+  margin-top: 12px;
 }
 </style>
