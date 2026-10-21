@@ -67,7 +67,7 @@
               v-model.number="form.quantity"
               label="Quantidade disponível"
               type="number"
-              min="1"
+              min="0"
               step="1"
               outlined
               hide-bottom-space
@@ -75,7 +75,7 @@
               :rules="[
                 (value) => value !== null && value !== '' || 'Informe a quantidade',
                 (value) => Number.isInteger(Number(value)) || 'Informe um número inteiro',
-                (value) => Number(value) >= 1 || 'A quantidade mínima é 1',
+                (value) => Number(value) >= 0 || 'A quantidade não pode ser negativa',
               ]"
             />
 
@@ -206,8 +206,10 @@ function handleSave() {
     !title ||
     !author ||
     form.publisherId === null ||
+    form.quantity === null ||
+    String(form.quantity).trim() === '' ||
     !Number.isInteger(quantity) ||
-    quantity < 1
+    quantity < 0
   ) {
     return;
   }

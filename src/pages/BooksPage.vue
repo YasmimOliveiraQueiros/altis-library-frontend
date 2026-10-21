@@ -4,7 +4,7 @@
       <div class="stat-card">
         <div class="stat-label">
           <span class="dot available"></span>
-          Livros disponíveis
+          Exemplares
         </div>
         <div class="stat-value">{{ availableCopiesOnPage }}</div>
       </div>
@@ -187,39 +187,16 @@
       @cancel="bookFormError = ''"
     />
 
-    <q-dialog v-model="showDeleteConfirmation" :persistent="deletingBookId !== null">
-      <q-card class="book-delete-dialog">
-        <q-card-section class="delete-dialog-header">
-          <div class="text-h6">Excluir livro</div>
-        </q-card-section>
-
-        <q-card-section>
-          Tem certeza que deseja excluir o livro
-          <strong>{{ pendingDeleteBook?.title }}</strong
-          >?
-          <div v-if="deleteErrorMessage" class="delete-error text-negative" role="alert">
-            {{ deleteErrorMessage }}
-          </div>
-        </q-card-section>
-
-        <q-card-actions align="right">
-          <q-btn
-            flat
-            label="Cancelar"
-            :disable="deletingBookId !== null"
-            @click="cancelDeleteConfirmation"
-          />
-          <q-btn
-            unelevated
-            color="negative"
-            label="Excluir"
-            :loading="deletingBookId === pendingDeleteBook?.id"
-            :disable="deletingBookId !== null"
-            @click="confirmDeleteBook"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <ConfirmDeleteDialog
+      v-model="showDeleteConfirmation"
+      title="Excluir livro"
+      message="Tem certeza que deseja excluir o livro"
+      :record-name="pendingDeleteBook?.title ?? ''"
+      :error-message="deleteErrorMessage"
+      :loading="deletingBookId !== null"
+      @confirm="confirmDeleteBook"
+      @cancel="cancelDeleteConfirmation"
+    />
   </q-page>
 </template>
 
@@ -232,6 +209,7 @@ import type { BookPayload, BookResponse, BookSortField, BookStatus, SortDirectio
 import { PublisherService } from '@/services/PublisherService';
 import type { PublisherResponse } from '@/types/Publisher';
 import BookFormDialog from '@/components/books/BookFormDialog.vue';
+import ConfirmDeleteDialog from '@/components/shared/ConfirmDeleteDialog.vue';
 
 interface BookTableRow extends BookResponse {
   publisherName: string;
@@ -745,20 +723,6 @@ onMounted(() => {
 .page-label {
   min-width: 105px;
   text-align: right;
-}
-
-.book-delete-dialog {
-  width: 420px;
-  max-width: 90vw;
-  border-radius: 8px;
-}
-
-.delete-dialog-header {
-  color: #1b3a5c;
-}
-
-.delete-error {
-  margin-top: 12px;
 }
 
 @media (max-width: 700px) {
