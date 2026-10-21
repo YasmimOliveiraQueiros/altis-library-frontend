@@ -9,7 +9,7 @@
 
       <q-item
         clickable
-        to="/"
+        to="/dashboard"
         exact
         active-class="menu-item-active"
       >

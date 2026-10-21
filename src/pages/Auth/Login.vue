@@ -38,13 +38,7 @@ async function handleLogin(credentials: LoginCredentials) {
   try {
     await authStore.login(credentials);
 
-    if (authStore.role === 'ADMIN') {
-      await router.push('/');
-    } else if (authStore.role === 'USER') {
-      // Definiremos a rota da área do usuário quando ela existir.
-      errorMessage.value =
-        'Login realizado, mas a área do usuário ainda não foi implementada.';
-    }
+    await router.push('/dashboard');
   } catch {
     errorMessage.value = 'E-mail ou senha inválidos. Tente novamente.';
   } finally {

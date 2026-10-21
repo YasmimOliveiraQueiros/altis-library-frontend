@@ -3,12 +3,13 @@ import type { RouteRecordRaw } from 'vue-router';
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/login',
+    redirect: '/dashboard',
   },
 
   {
     path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
     children: [
       { path: 'dashboard', component: () => import('@/pages/DashboardPage.vue') },
       { path: 'editoras', component: () => import('@/pages/PublisherPage.vue') },
