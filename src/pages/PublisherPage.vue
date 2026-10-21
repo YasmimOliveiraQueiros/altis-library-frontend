@@ -104,39 +104,16 @@
       @cancel="publisherFormError = ''"
     />
 
-    <q-dialog v-model="showDeleteConfirmation" :persistent="deletingPublisherId !== null">
-      <q-card class="publisher-delete-dialog">
-        <q-card-section class="delete-dialog-header">
-          <div class="text-h6">Excluir editora</div>
-        </q-card-section>
-
-        <q-card-section>
-          Tem certeza que deseja excluir a editora
-          <strong>{{ pendingDeletePublisher?.name }}</strong
-          >?
-          <div v-if="deleteErrorMessage" class="delete-error text-negative" role="alert">
-            {{ deleteErrorMessage }}
-          </div>
-        </q-card-section>
-
-        <q-card-actions align="right">
-          <q-btn
-            flat
-            label="Cancelar"
-            :disable="deletingPublisherId !== null"
-            @click="cancelDeleteConfirmation"
-          />
-          <q-btn
-            unelevated
-            color="negative"
-            label="Excluir"
-            :loading="deletingPublisherId === pendingDeletePublisher?.id"
-            :disable="deletingPublisherId !== null"
-            @click="confirmDeletePublisher"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <ConfirmDeleteDialog
+      v-model="showDeleteConfirmation"
+      title="Excluir editora"
+      message="Tem certeza que deseja excluir a editora"
+      :record-name="pendingDeletePublisher?.name ?? ''"
+      :error-message="deleteErrorMessage"
+      :loading="deletingPublisherId !== null"
+      @confirm="confirmDeletePublisher"
+      @cancel="cancelDeleteConfirmation"
+    />
   </q-page>
 </template>
 
@@ -145,6 +122,7 @@ import { computed, onMounted, ref } from 'vue';
 import { PublisherService } from '@/services/PublisherService';
 import type { PublisherPayload, PublisherResponse, PublisherStatus } from '@/types/Publisher';
 import PublisherFormDialog from '@/components/publishers/PublisherFormDialog.vue';
+import ConfirmDeleteDialog from '@/components/shared/ConfirmDeleteDialog.vue';
 import { useQuasar } from 'quasar';
 import type { QTableColumn } from 'quasar';
 
@@ -539,17 +517,4 @@ const columns: QTableColumn[] = [
   font-size: 13px;
 }
 
-.publisher-delete-dialog {
-  width: 420px;
-  max-width: 90vw;
-  border-radius: 8px;
-}
-
-.delete-dialog-header {
-  color: #1b3a5c;
-}
-
-.delete-error {
-  margin-top: 12px;
-}
 </style>

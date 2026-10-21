@@ -3,40 +3,10 @@
 
     <section class="summary-cards">
 
-      <q-card class="summary-card">
-        <span class="card-indicator livros"></span>
-        <span>Livros</span>
-        <strong>0</strong>
-      </q-card>
-
-      <q-card class="summary-card">
-        <span class="card-indicator editoras"></span>
-        <span>Editoras</span>
-        <strong>0</strong>
-      </q-card>
-
-      <q-card class="summary-card">
-        <span class="card-indicator alugados"></span>
-        <span>Alugados</span>
-        <strong>0</strong>
-      </q-card>
-
-      <q-card class="summary-card">
-        <span class="card-indicator usuarios"></span>
-        <span>Usuários</span>
-        <strong>0</strong>
-      </q-card>
-
-      <q-card class="summary-card">
-        <span class="card-indicator pendentes"></span>
-        <span>Pendentes</span>
-        <strong>0</strong>
-      </q-card>
-
-      <q-card class="summary-card">
-        <span class="card-indicator atrasados"></span>
-        <span>Atrasados</span>
-        <strong>0</strong>
+      <q-card v-for="card in summaryCards" :key="card.label" class="summary-card">
+        <span class="card-indicator" :class="card.indicatorClass"></span>
+        <span>{{ card.label }}</span>
+        <strong>{{ card.value }}</strong>
       </q-card>
 
     </section>
@@ -77,6 +47,17 @@
 
   </q-page>
 </template>
+
+<script setup lang="ts">
+const summaryCards = [
+  { label: 'Livros', value: 0, indicatorClass: 'livros' },
+  { label: 'Editoras', value: 0, indicatorClass: 'editoras' },
+  { label: 'Alugados', value: 0, indicatorClass: 'alugados' },
+  { label: 'Usuários', value: 0, indicatorClass: 'usuarios' },
+  { label: 'Pendentes', value: 0, indicatorClass: 'pendentes' },
+  { label: 'Atrasados', value: 0, indicatorClass: 'atrasados' },
+];
+</script>
 
 <style scoped>
 .dashboard-page {

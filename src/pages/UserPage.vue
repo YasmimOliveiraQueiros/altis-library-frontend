@@ -3,40 +3,15 @@
 
     <section class="topo">
       <div class="cards">
-
-        <q-card class="card">
+        <q-card v-for="card in statisticCards" :key="card.label" class="card">
           <q-card-section>
             <div class="card-title">
-              <span class="indicador ativo"></span>
-              Ativos
+              <span class="indicador" :class="card.indicatorClass"></span>
+              {{ card.label }}
             </div>
-
-            <div class="card-value"> {{ totalAtivos }}</div>
+            <div class="card-value">{{ card.value }}</div>
           </q-card-section>
         </q-card>
-
-        <q-card class="card">
-          <q-card-section>
-            <div class="card-title">
-              <span class="indicador inativo"></span>
-              Inativos
-            </div>
-
-            <div class="card-value"> {{ totalInativos }}</div>
-          </q-card-section>
-        </q-card>
-
-        <q-card class="card">
-          <q-card-section>
-            <div class="card-title">
-              <span class="indicador total"></span>
-              Total
-            </div>
-
-            <div class="card-value"> {{ totalUsuarios }}</div>
-          </q-card-section>
-        </q-card>
-
       </div>
     </section>
 
@@ -131,6 +106,12 @@ const usuariosFiltrados = computed(() => {
 const totalAtivos = ref(0);
 const totalInativos = ref(0);
 const totalUsuarios = ref(0);
+
+const statisticCards = computed(() => [
+  { label: 'Ativos', value: totalAtivos.value, indicatorClass: 'ativo' },
+  { label: 'Inativos', value: totalInativos.value, indicatorClass: 'inativo' },
+  { label: 'Total', value: totalUsuarios.value, indicatorClass: 'total' },
+]);
 
 const carregando = ref(false);
 const erro = ref('');
