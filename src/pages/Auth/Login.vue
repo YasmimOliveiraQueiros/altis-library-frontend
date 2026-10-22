@@ -38,7 +38,7 @@ async function handleLogin(credentials: LoginCredentials) {
   try {
     await authStore.login(credentials);
 
-    await router.push('/dashboard');
+    await router.push(authStore.isAdmin ? '/dashboard' : '/meu-dashboard');
   } catch {
     errorMessage.value = 'E-mail ou senha inválidos. Tente novamente.';
   } finally {

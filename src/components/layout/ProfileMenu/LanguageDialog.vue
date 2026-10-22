@@ -2,7 +2,7 @@
     <q-dialog v-model="dialog">
         <q-card class="language-dialog">
             <q-card-section>
-                <div class="text-h6">Idioma</div>
+                <div class="text-h6">{{ t('profile.languageLabel') }}</div>
             </q-card-section>
 
             <q-card-section>
@@ -43,8 +43,9 @@ import { useI18n } from 'vue-i18n';
 
 const { locale, t } = useI18n();
 
-const changeLanguage = (lang: string) => {
+const changeLanguage = (lang: 'pt-BR' | 'en-US' | 'es-ES') => {
     locale.value = lang;
+    localStorage.setItem('locale', lang);
     emit('update:modelValue', false);
 };
 

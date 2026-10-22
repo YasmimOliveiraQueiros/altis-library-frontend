@@ -6,14 +6,12 @@
         dense
         round
         icon="menu"
-        aria-label="Menu"
+        :aria-label="t('navigation.openMenu')"
         @click="$emit('toggle-menu')"
       />
 
       <div class="header-title">
-        <div class="title">
-          Altis+ Biblioteca
-        </div>
+        <div class="title">Altis+ Biblioteca</div>
 
         <div class="subtitle">
           {{ subtitle }}
@@ -22,13 +20,18 @@
 
       <q-space />
 
-      <ProfileMenu :is-admin="true" />
+      <ProfileMenu :is-admin="authStore.isAdmin" />
     </q-toolbar>
   </q-header>
 </template>
 
 <script setup lang="ts">
 import ProfileMenu from '@/components/layout/ProfileMenu/ProfileMenu.vue';
+import { useAuthStore } from '@/stores/Auth/AuthStore';
+import { useI18n } from 'vue-i18n';
+
+const authStore = useAuthStore();
+const { t } = useI18n();
 defineProps<{
   subtitle: string;
 }>();

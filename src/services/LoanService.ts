@@ -8,6 +8,14 @@ async function getLoans(params: GetLoansParams = {}): Promise<PageResponse<LoanR
   return response.data;
 }
 
+async function getMyLoans(
+  params: Omit<GetLoansParams, 'name' | 'status'> = {},
+): Promise<PageResponse<LoanResponse>> {
+  const response = await api.get<PageResponse<LoanResponse>>('/loans/my', { params });
+
+  return response.data;
+}
+
 async function createLoan(payload: LoanRequest): Promise<LoanResponse> {
   const response = await api.post<LoanResponse>('/loans', payload);
 
@@ -24,4 +32,4 @@ async function returnLoan(id: number): Promise<void> {
   await api.patch<void>(`/loans/${id}/return`);
 }
 
-export const LoanService = { getLoans, createLoan, updateLoan, returnLoan };
+export const LoanService = { getLoans, getMyLoans, createLoan, updateLoan, returnLoan };

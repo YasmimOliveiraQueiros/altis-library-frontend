@@ -5,6 +5,7 @@ export interface LoanResponse {
   id: number;
   userId: number;
   bookId: number;
+  bookTitle: string;
   loanDate: string;
   returnDate: string;
   returnedAt: string | null;
