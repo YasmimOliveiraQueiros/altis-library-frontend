@@ -1,26 +1,10 @@
 <template>
   <q-page class="loans-page">
-    <!-- Cards -->
     <section class="summary-section">
       <div class="summary-cards">
-        <div class="summary-card">
-          <p><span class="dot pending"></span>Pendentes</p>
-          <h2>1</h2>
-        </div>
-
-        <div class="summary-card">
-          <p><span class="dot overdue"></span>Atrasados</p>
-          <h2>1</h2>
-        </div>
-
-        <div class="summary-card">
-          <p><span class="dot returned"></span>Devolvidos</p>
-          <h2>1</h2>
-        </div>
-
-        <div class="summary-card">
-          <p><span class="dot total"></span>Total</p>
-          <h2>3</h2>
+        <div v-for="card in summaryCards" :key="card.label" class="summary-card">
+          <p><span class="dot" :class="card.indicatorClass"></span>{{ card.label }}</p>
+          <h2>{{ dashboardLoading ? '…' : (card.value ?? '—') }}</h2>
         </div>
       </div>
 
@@ -28,11 +12,15 @@
         label="+ Novo aluguel"
         class="new-loan-btn"
         unelevated
-        @click="showLoanForm = true"
+        :disable="savingLoan"
+        @click="openCreateLoan"
       />
     </section>
 
-    <!-- Pesquisa -->
+    <q-banner v-if="dashboardError" dense class="state-banner error-banner" role="alert">
+      {{ dashboardError }}
+    </q-banner>
+
     <section class="search-section">
       <q-input
         v-model="search"
@@ -40,283 +28,629 @@
         dense
         placeholder="Buscar por locatário ou livro"
         class="search-input"
+        @keyup.enter="searchLoans"
       />
 
       <q-select
         v-model="statusFilter"
         :options="statusOptions"
+        emit-value
+        map-options
         outlined
         dense
         class="status-filter filter-select"
         popup-content-class="filter-select-menu"
+        @update:model-value="filterByStatus"
       />
     </section>
 
-    <!-- Tabela -->
+    <q-banner v-if="loansError" dense class="state-banner error-banner" role="alert">
+      {{ loansError }}
+      <template #action>
+        <q-btn flat label="Tentar novamente" :loading="loansLoading" @click="loadLoans" />
+      </template>
+    </q-banner>
+
+    <q-banner v-if="referencesError" dense class="state-banner reference-banner" role="alert">
+      {{ referencesError }} Os IDs serão exibidos até que os dados possam ser carregados.
+      <template #action>
+        <q-btn flat label="Tentar novamente" :loading="referencesLoading" @click="loadReferences" />
+      </template>
+    </q-banner>
+
     <section class="table-section">
       <q-table
         flat
-        :rows="filteredLoans"
+        :rows="tableRows"
         :columns="columns"
         row-key="id"
+        :loading="loansLoading"
         hide-pagination
-        :rows-per-page-options="[0]"
+        hide-bottom
+        :no-data-label="noDataMessage"
       >
         <template #body-cell-status="props">
           <q-td :props="props">
-            <span
-              class="status"
-              :class="getStatusClass(props.row.status)"
-            >
-              {{ props.row.status }}
+            <span class="status" :class="getStatusClass(props.row.status)">
+              {{ getStatusLabel(props.row.status) }}
             </span>
           </q-td>
         </template>
-
-        <template #body-cell-action="props">
+        <template #body-cell-actions="props">
           <q-td :props="props">
-            <div class="action-cell">
-              <q-select
-                v-model="props.row.status"
-                :options="actionOptions"
-                outlined
-                dense
-                class="action-select filter-select"
-                popup-content-class="filter-select-menu"
-              />
-            </div>
+            <q-btn-dropdown
+              flat
+              round
+              dense
+              dropdown-icon="more_vert"
+              aria-label="Ações do aluguel"
+              :disable="savingLoan || returningLoanId !== null"
+            >
+              <q-list>
+                <q-item
+                  class="loan-action-item"
+                  v-close-popup
+                  clickable
+                  @click="openEditLoan(props.row)"
+                >
+                  <q-item-section avatar><q-icon name="edit" /></q-item-section>
+                  <q-item-section>Editar</q-item-section>
+                </q-item>
+                <q-item
+                  class="loan-action-item"
+                  v-if="isActiveLoan(props.row.status)"
+                  v-close-popup
+                  clickable
+                  @click="openReturnConfirmation(props.row)"
+                >
+                  <q-item-section avatar><q-icon name="assignment_return" /></q-item-section>
+                  <q-item-section>Registrar devolução</q-item-section>
+                </q-item>
+              </q-list>
+            </q-btn-dropdown>
           </q-td>
         </template>
+        <template #no-data>
+          <div class="no-data">
+            <q-icon :name="search || statusFilter ? 'search_off' : 'menu_book'" size="20px" />
+            <span>{{ noDataMessage }}</span>
+          </div>
+        </template>
       </q-table>
-    </section>
 
-    <!-- Formulário de novo aluguel -->
-    <q-dialog v-model="showLoanForm">
-      <q-card class="loan-form">
-        <q-card-section class="form-header">
-          <div class="text-h6">Novo Aluguel</div>
+      <div class="pagination-controls">
+        <div class="page-size-control">
+          <span>Linhas por página</span>
+          <q-select
+            v-model="pageSize"
+            dense
+            outlined
+            :options="pageSizeOptions"
+            class="page-size-select"
+            popup-content-class="filter-select-menu"
+            aria-label="Linhas por página"
+            @update:model-value="changePageSize"
+          />
+        </div>
 
+        <div class="page-navigation">
+          <span class="page-label">{{ pageLabel }}</span>
           <q-btn
             flat
             round
             dense
-            icon="close"
-            @click="showLoanForm = false"
+            icon="chevron_left"
+            aria-label="Página anterior"
+            :disable="loansLoading || page === 0 || totalPages === 0"
+            @click="goToPreviousPage"
           />
-        </q-card-section>
+          <q-btn
+            flat
+            round
+            dense
+            icon="chevron_right"
+            aria-label="Próxima página"
+            :disable="loansLoading || page + 1 >= totalPages"
+            @click="goToNextPage"
+          />
+        </div>
+      </div>
+    </section>
 
+    <LoanFormDialog
+      v-model="showLoanForm"
+      :mode="loanFormMode"
+      v-bind="selectedLoan ? { initialData: selectedLoan } : {}"
+      :users="users"
+      :books="books"
+      :references-loaded="referencesLoaded"
+      :references-loading="referencesLoading"
+      :references-error="referencesError"
+      :loading="savingLoan"
+      :error-message="loanFormError"
+      @save="saveLoan"
+      @cancel="cancelLoanForm"
+    />
+
+    <q-dialog v-model="showReturnConfirmation" :persistent="returningLoanId !== null">
+      <q-card class="loan-confirmation">
+        <q-card-section class="text-h6">Registrar devolução</q-card-section>
         <q-card-section>
-          <q-form @submit.prevent="saveLoan">
-            <!-- Locatário -->
-            <q-input
-              v-model="form.tenant"
-              label="Locatário"
-              outlined
-            />
-
-            <!-- Livro -->
-            <q-select
-              v-model="form.book"
-              label="Livro"
-              :options="bookOptions"
-              outlined
-              class="q-mt-md filter-select"
-              popup-content-class="filter-select-menu"
-            />
-
-            <!-- Datas -->
-            <div class="date-fields">
-              <q-input
-                v-model="form.rentalDate"
-                label="Data do aluguel"
-                outlined
-                type="date"
-              />
-
-              <q-input
-                v-model="form.returnDate"
-                label="Data de devolução"
-                outlined
-                type="date"
-              />
-            </div>
-
-            <!-- Observações -->
-            <q-input
-              v-model="form.observations"
-              label="Observações"
-              outlined
-              type="textarea"
-              class="q-mt-md"
-            />
-
-            <!-- Botões -->
-            <div class="form-actions">
-              <q-btn
-                label="Cancelar"
-                flat
-                class="cancel-btn"
-                @click="showLoanForm = false"
-              />
-
-              <q-btn
-                label="Salvar"
-                type="submit"
-              />
-            </div>
-          </q-form>
+          Confirma a devolução do empréstimo #{{ pendingReturnLoan?.id }}?
+          <div v-if="returnErrorMessage" class="operation-error" role="alert">
+            {{ returnErrorMessage }}
+          </div>
         </q-card-section>
+        <q-card-actions align="right">
+          <q-btn
+            flat
+            label="Cancelar"
+            color="primary"
+            :disable="returningLoanId !== null"
+            @click="cancelReturnConfirmation"
+          />
+          <q-btn
+            unelevated
+            label="Confirmar devolução"
+            color="primary"
+            :loading="returningLoanId !== null"
+            @click="confirmReturnLoan"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import type { QTableColumn } from 'quasar';
+import { useQuasar } from 'quasar';
+import { BookService } from '@/services/BookService';
+import { DashboardService } from '@/services/DashboardService';
+import { LoanService } from '@/services/LoanService';
+import { UserService } from '@/services/UserService';
+import LoanFormDialog from '@/components/loans/LoanFormDialog.vue';
+import type { GetLoansParams, LoanRequest, LoanResponse, LoanStatus } from '@/types/Loan';
+import type { DashboardResponse } from '@/types/Dashboard';
+import type { BookResponse } from '@/types/Book';
+import type { PageResponse, UserResponse } from '@/types/User';
 
-const showLoanForm = ref(false);
-
-const form = ref({
-  tenant: '',
-  book: null,
-  rentalDate: '',
-  returnDate: '',
-  observations: '',
-});
-
-const bookOptions = [
-  'Dom Casmurro',
-  'O Alquimista',
-  '1984',
-];
-
-function saveLoan() {
-  showLoanForm.value = false;
+interface LoanTableRow extends LoanResponse {
+  userName: string;
+  bookTitle: string;
+  loanDateLabel: string;
+  returnDateLabel: string;
 }
 
-interface Loan {
-  id: number;
-  tenant: string;
-  book: string;
-  rentalDate: string;
-  returnDate: string;
-  status: string;
-}
+const $q = useQuasar();
+const dashboard = ref<DashboardResponse | null>(null);
+const dashboardLoading = ref(false);
+const dashboardError = ref('');
+let dashboardAccessDenied = false;
+let dashboardRefreshPending = false;
 
-const search = ref('');
-
-const statusFilter = ref('Todos os status');
-
-const statusOptions = [
-  'Todos os status',
-  'Pendente',
-  'Atrasado',
-  'Devolvido',
-  'Devolvido C/A',
-];
-
-const actionOptions = [
-  'Pendente',
-  'Atrasado',
-  'Devolvido',
-  'Devolvido C/A',
-];
-
-const loans = ref<Loan[]>([
+const summaryCards = computed(() => [
+  { label: 'Pendentes', value: dashboard.value?.pendingLoans, indicatorClass: 'pending' },
+  { label: 'Atrasados', value: dashboard.value?.overdueLoans, indicatorClass: 'overdue' },
+  { label: 'Devolvidos', value: dashboard.value?.returnedLoans, indicatorClass: 'returned' },
   {
-    id: 1,
-    tenant: 'Anna Silva',
-    book: 'Dom Casmurro',
-    rentalDate: '01/07',
-    returnDate: '16/07',
-    status: 'Devolvido C/A',
-  },
-  {
-    id: 2,
-    tenant: 'Fulano S.',
-    book: 'O Alquimista',
-    rentalDate: '01/07',
-    returnDate: '16/07',
-    status: 'Devolvido',
-  },
-  {
-    id: 3,
-    tenant: 'Ciclano',
-    book: 'O Alquimista',
-    rentalDate: '01/07',
-    returnDate: '16/07',
-    status: 'Pendente',
+    label: 'Total',
+    value: dashboard.value
+      ? dashboard.value.pendingLoans + dashboard.value.overdueLoans + dashboard.value.returnedLoans
+      : undefined,
+    indicatorClass: 'total',
   },
 ]);
 
-const columns = [
-  {
-    name: 'tenant',
-    label: 'Locatário',
-    field: 'tenant',
-    align: 'left' as const,
-  },
-  {
-    name: 'book',
-    label: 'Livro',
-    field: 'book',
-    align: 'left' as const,
-  },
-  {
-    name: 'rentalDate',
-    label: 'Aluguel',
-    field: 'rentalDate',
-    align: 'left' as const,
-  },
-  {
-    name: 'returnDate',
-    label: 'Devolução',
-    field: 'returnDate',
-    align: 'left' as const,
-  },
-  {
-    name: 'status',
-    label: 'Status',
-    field: 'status',
-    align: 'center' as const,
-  },
-  {
-    name: 'action',
-    label: 'Ação',
-    field: 'status',
-    align: 'center' as const,
-  },
+const statusOptions: { label: string; value: LoanStatus | null }[] = [
+  { label: 'Todos os status', value: null },
+  { label: 'Pendente', value: 'PENDING' },
+  { label: 'Atrasado', value: 'OVERDUE' },
+  { label: 'Devolvido', value: 'RETURNED' },
+  { label: 'Devolvido C/A', value: 'RETURNED_LATE' },
 ];
 
-const filteredLoans = computed(() => {
-  const term = search.value.toLowerCase();
+const pageSizeOptions = [10, 25, 50];
+const search = ref('');
+const statusFilter = ref<LoanStatus | null>(null);
+const loans = ref<LoanResponse[]>([]);
+const loansLoading = ref(false);
+const loansError = ref('');
+const page = ref(0);
+const pageSize = ref(10);
+const totalElements = ref(0);
+const totalPages = ref(0);
+const userNames = ref(new Map<number, string>());
+const bookTitles = ref(new Map<number, string>());
+const users = ref<UserResponse[]>([]);
+const books = ref<BookResponse[]>([]);
+const referencesLoading = ref(false);
+const referencesError = ref('');
+const referencesLoaded = ref(false);
+const referencesAttempted = ref(false);
+const showLoanForm = ref(false);
+const loanFormMode = ref<'create' | 'edit'>('create');
+const selectedLoan = ref<LoanResponse | null>(null);
+const savingLoan = ref(false);
+const loanFormError = ref('');
+const pendingReturnLoan = ref<LoanResponse | null>(null);
+const showReturnConfirmation = ref(false);
+const returningLoanId = ref<number | null>(null);
+const returnErrorMessage = ref('');
+let loansRequestId = 0;
 
-  return loans.value.filter((loan) => {
-    const matchesSearch =
-      loan.tenant.toLowerCase().includes(term) ||
-      loan.book.toLowerCase().includes(term);
+const columns: QTableColumn<LoanTableRow>[] = [
+  { name: 'user', label: 'Locatário', field: 'userName', align: 'left' },
+  { name: 'book', label: 'Livro', field: 'bookTitle', align: 'left' },
+  { name: 'loanDate', label: 'Aluguel', field: 'loanDateLabel', align: 'left' },
+  { name: 'returnDate', label: 'Devolução', field: 'returnDateLabel', align: 'left' },
+  { name: 'status', label: 'Status', field: 'status', align: 'center' },
+  { name: 'actions', label: 'Ação', field: 'id', align: 'center' },
+];
 
-    const matchesStatus =
-      statusFilter.value === 'Todos os status' ||
-      loan.status === statusFilter.value;
+const tableRows = computed<LoanTableRow[]>(() =>
+  loans.value.map((loan) => ({
+    ...loan,
+    userName: userNames.value.get(loan.userId) ?? `Usuário #${loan.userId}`,
+    bookTitle: bookTitles.value.get(loan.bookId) ?? `Livro #${loan.bookId}`,
+    loanDateLabel: formatDate(loan.loanDate),
+    returnDateLabel: formatDate(loan.returnDate),
+  })),
+);
 
-    return matchesSearch && matchesStatus;
-  });
-});
+const noDataMessage = computed(() =>
+  search.value.trim() || statusFilter.value
+    ? 'Nenhum aluguel encontrado para estes filtros.'
+    : 'Ainda não há aluguéis cadastrados.',
+);
 
-function getStatusClass(status: string) {
-  if (status === 'Pendente') {
-    return 'pending';
+const pageLabel = computed(() =>
+  totalPages.value > 0 ? `Página ${page.value + 1} de ${totalPages.value}` : 'Nenhuma página',
+);
+
+async function loadDashboardStats() {
+  if (dashboardAccessDenied) return;
+  if (dashboardLoading.value) {
+    dashboardRefreshPending = true;
+    return;
   }
 
-  if (status === 'Atrasado') {
-    return 'overdue';
+  dashboardLoading.value = true;
+  dashboardError.value = '';
+  try {
+    const stats = await DashboardService.getDashboard();
+    if (!dashboardRefreshPending) dashboard.value = stats;
+  } catch (error) {
+    const status =
+      error && typeof error === 'object' && 'response' in error
+        ? (error.response as { status?: number } | undefined)?.status
+        : undefined;
+    dashboardAccessDenied = status === 403;
+    if (dashboardAccessDenied) dashboardRefreshPending = false;
+    if (!dashboardRefreshPending || dashboardAccessDenied) {
+      dashboard.value = null;
+      dashboardError.value = dashboardAccessDenied
+        ? 'Você não tem permissão para visualizar as estatísticas.'
+        : 'Não foi possível carregar as estatísticas de empréstimos.';
+    }
+  } finally {
+    dashboardLoading.value = false;
+    if (dashboardRefreshPending && !dashboardAccessDenied) {
+      dashboardRefreshPending = false;
+      void loadDashboardStats();
+    }
   }
-
-  return status === 'Devolvido' || status === 'Devolvido C/A'
-    ? 'returned'
-    : '';
 }
+
+function formatDate(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
+}
+
+function getStatusLabel(status: LoanStatus): string {
+  const labels: Record<LoanStatus, string> = {
+    PENDING: 'Pendente',
+    OVERDUE: 'Atrasado',
+    RETURNED: 'Devolvido',
+    RETURNED_LATE: 'Devolvido C/A',
+  };
+  return labels[status];
+}
+
+function getStatusClass(status: LoanStatus): string {
+  if (status === 'PENDING') return 'pending';
+  if (status === 'OVERDUE') return 'overdue';
+  return 'returned';
+}
+
+function isActiveLoan(status: LoanStatus): boolean {
+  return status === 'PENDING' || status === 'OVERDUE';
+}
+
+async function loadLoans() {
+  const requestId = ++loansRequestId;
+  loansLoading.value = true;
+  loansError.value = '';
+
+  const params: GetLoansParams = {
+    ...(search.value.trim() ? { name: search.value.trim() } : {}),
+    ...(statusFilter.value ? { status: statusFilter.value } : {}),
+    page: page.value,
+    size: pageSize.value,
+  };
+
+  try {
+    const response = await LoanService.getLoans(params);
+    if (requestId !== loansRequestId) return;
+
+    loans.value = response.content ?? [];
+    totalElements.value = response.totalElements;
+    totalPages.value = response.totalPages;
+    if (loans.value.length && !referencesAttempted.value) void loadReferences();
+  } catch {
+    if (requestId !== loansRequestId) return;
+
+    loans.value = [];
+    totalElements.value = 0;
+    totalPages.value = 0;
+    loansError.value = 'Não foi possível carregar os aluguéis. Tente novamente.';
+  } finally {
+    if (requestId === loansRequestId) loansLoading.value = false;
+  }
+}
+
+async function reloadLoansAfterOperation() {
+  await loadLoans();
+  if (!loansError.value && page.value > 0 && page.value >= totalPages.value) {
+    page.value = Math.max(0, totalPages.value - 1);
+    await loadLoans();
+  }
+}
+
+async function loadAllPages<T>(
+  getPage: (pageNumber: number, size: number) => Promise<PageResponse<T>>,
+): Promise<T[]> {
+  const size = 100;
+  const firstPage = await getPage(0, size);
+  const items = [...firstPage.content];
+
+  for (let pageNumber = 1; pageNumber < firstPage.totalPages; pageNumber += 1) {
+    const response = await getPage(pageNumber, size);
+    items.push(...response.content);
+  }
+
+  return items;
+}
+
+async function loadReferences() {
+  if (referencesLoading.value) return;
+
+  referencesAttempted.value = true;
+  referencesLoading.value = true;
+  referencesError.value = '';
+
+  try {
+    const [userRecords, bookRecords] = await Promise.all([
+      loadAllPages((pageNumber, size) => UserService.getUsers({ page: pageNumber, size })),
+      loadAllPages((pageNumber, size) => BookService.getBooks({ page: pageNumber, size })),
+    ]);
+
+    users.value = userRecords;
+    books.value = bookRecords;
+    userNames.value = new Map(userRecords.map((user): [number, string] => [user.id, user.name]));
+    bookTitles.value = new Map(bookRecords.map((book): [number, string] => [book.id, book.title]));
+    referencesLoaded.value = true;
+  } catch {
+    referencesError.value = 'Não foi possível carregar os nomes de usuários e livros.';
+  } finally {
+    referencesLoading.value = false;
+  }
+}
+
+function openCreateLoan() {
+  loanFormMode.value = 'create';
+  selectedLoan.value = null;
+  loanFormError.value = '';
+  showLoanForm.value = true;
+  if (!referencesLoaded.value && !referencesLoading.value) void loadReferences();
+}
+
+function openEditLoan(row: LoanTableRow) {
+  loanFormMode.value = 'edit';
+  selectedLoan.value = loans.value.find((loan) => loan.id === row.id) ?? row;
+  loanFormError.value = '';
+  showLoanForm.value = true;
+  if (!referencesLoaded.value && !referencesLoading.value) void loadReferences();
+}
+
+function cancelLoanForm() {
+  loanFormError.value = '';
+}
+
+function getLoanSaveErrorMessage(error: unknown, isEditing: boolean): string {
+  let backendMessage = '';
+  let status: number | undefined;
+
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = error.response as { status?: number; data?: unknown } | undefined;
+    status = response?.status;
+    if (typeof response?.data === 'string') {
+      backendMessage = response.data;
+    } else if (response?.data && typeof response.data === 'object') {
+      const data = response.data as Record<string, unknown>;
+      backendMessage = [data.message, data.detail, data.error]
+        .filter((value): value is string => typeof value === 'string')
+        .join(' ');
+    }
+  }
+
+  const normalized = backendMessage
+    .toLocaleLowerCase('pt-BR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  if (/user.*(not found|does not exist)|usuario.*(nao encontrado|inexistente|nao existe)/.test(normalized)) {
+    return 'O usuário selecionado não foi encontrado.';
+  }
+  if (/book.*(not found|does not exist)|livro.*(nao encontrado|inexistente|nao existe)/.test(normalized)) {
+    return 'O livro selecionado não foi encontrado.';
+  }
+  if (
+    /book.*(unavailable|no stock|no copies|not available)|no available copies|livro.*(sem exemplar|sem estoque|indisponivel|nao possui exemplares)/.test(
+      normalized,
+    )
+  ) {
+    return 'O livro não possui exemplares disponíveis para empréstimo.';
+  }
+  if (
+    /(five|cinco|5).*(loan|emprest)|limit.*(loan|emprest)|limite.*emprest|emprestimos ativos|active loans/.test(
+      normalized,
+    )
+  ) {
+    return 'O usuário atingiu o limite de cinco empréstimos ativos.';
+  }
+  if (/\b(date|dates|data|datas)\b|loan date|return date/.test(normalized)) {
+    return 'As datas informadas são inválidas. Confira o período do empréstimo.';
+  }
+  if (
+    isEditing &&
+    /(change|alter|modify).*(user|book|usuario|livro)|(user|book|usuario|livro).*(change|alter|modify)/.test(
+      normalized,
+    )
+  ) {
+    return 'Não é permitido alterar o usuário ou o livro de um empréstimo.';
+  }
+  if (status === 409) {
+    return isEditing
+      ? 'O empréstimo não pode ser editado devido às regras do backend.'
+      : 'O empréstimo conflita com uma regra do backend. Verifique os dados e tente novamente.';
+  }
+
+  return backendMessage || 'Não foi possível salvar o empréstimo. Verifique os dados e tente novamente.';
+}
+
+async function saveLoan(payload: LoanRequest) {
+  if (savingLoan.value) return;
+
+  const isEditing = loanFormMode.value === 'edit';
+  const loanId = selectedLoan.value?.id;
+  if (isEditing && loanId === undefined) {
+    loanFormError.value = 'Não foi possível identificar o empréstimo para edição.';
+    return;
+  }
+
+  savingLoan.value = true;
+  loanFormError.value = '';
+  try {
+    if (isEditing && loanId !== undefined) {
+      await LoanService.updateLoan(loanId, payload);
+    } else {
+      await LoanService.createLoan(payload);
+      page.value = 0;
+    }
+    showLoanForm.value = false;
+    selectedLoan.value = null;
+    await reloadLoansAfterOperation();
+    await loadDashboardStats();
+  } catch (error) {
+    loanFormError.value = getLoanSaveErrorMessage(error, isEditing);
+  } finally {
+    savingLoan.value = false;
+  }
+}
+
+function openReturnConfirmation(loan: LoanResponse) {
+  if (!isActiveLoan(loan.status) || returningLoanId.value !== null) return;
+  pendingReturnLoan.value = loan;
+  returnErrorMessage.value = '';
+  showReturnConfirmation.value = true;
+}
+
+function cancelReturnConfirmation() {
+  if (returningLoanId.value !== null) return;
+  showReturnConfirmation.value = false;
+  pendingReturnLoan.value = null;
+  returnErrorMessage.value = '';
+}
+
+function getReturnErrorMessage(error: unknown): string {
+  const fallback =
+    'Não foi possível registrar a devolução. Verifique sua conexão e tente novamente.';
+  if (!error || typeof error !== 'object' || !('response' in error)) return fallback;
+
+  const response = error.response;
+  if (!response || typeof response !== 'object') return fallback;
+  const details = response as { status?: number; data?: unknown };
+  let backendMessage = '';
+  if (typeof details.data === 'string') backendMessage = details.data;
+  else if (details.data && typeof details.data === 'object') {
+    const data = details.data as Record<string, unknown>;
+    backendMessage = [data.message, data.detail, data.error]
+      .filter((value): value is string => typeof value === 'string')
+      .join(' ');
+  }
+
+  if (details.status === 404) return backendMessage || 'Este empréstimo não foi encontrado.';
+  if (details.status === 409)
+    return backendMessage || 'Este empréstimo já foi devolvido ou não pode ser devolvido.';
+  return backendMessage || fallback;
+}
+
+async function confirmReturnLoan() {
+  const loan = pendingReturnLoan.value;
+  if (!loan || !isActiveLoan(loan.status) || returningLoanId.value !== null) return;
+  returningLoanId.value = loan.id;
+  returnErrorMessage.value = '';
+  try {
+    await LoanService.returnLoan(loan.id);
+    showReturnConfirmation.value = false;
+    pendingReturnLoan.value = null;
+    $q.notify({
+      type: 'positive',
+      message: 'Devolução registrada com sucesso.',
+      position: 'top-right',
+    });
+    await reloadLoansAfterOperation();
+    await loadDashboardStats();
+  } catch (error) {
+    returnErrorMessage.value = getReturnErrorMessage(error);
+  } finally {
+    returningLoanId.value = null;
+  }
+}
+
+function searchLoans() {
+  page.value = 0;
+  void loadLoans();
+}
+
+function filterByStatus() {
+  page.value = 0;
+  void loadLoans();
+}
+
+function changePageSize() {
+  page.value = 0;
+  void loadLoans();
+}
+
+function goToPreviousPage() {
+  if (page.value === 0) return;
+  page.value -= 1;
+  void loadLoans();
+}
+
+function goToNextPage() {
+  if (page.value + 1 >= totalPages.value) return;
+  page.value += 1;
+  void loadLoans();
+}
+
+onMounted(() => {
+  void loadLoans();
+  void loadDashboardStats();
+});
 </script>
 
 <style scoped>
@@ -414,6 +748,21 @@ function getStatusClass(status: string) {
   width: 180px;
 }
 
+.state-banner {
+  margin-bottom: 12px;
+  border-radius: 6px;
+}
+
+.error-banner {
+  background-color: #fff1f0;
+  color: #9f2828;
+}
+
+.reference-banner {
+  background-color: #fff8e8;
+  color: #684b13;
+}
+
 .table-section {
   min-height: 250px;
   background-color: #ffffff;
@@ -458,58 +807,55 @@ function getStatusClass(status: string) {
   background-color: #19a974;
 }
 
-.action-select {
-  width: 120px;
-}
-
-.action-cell {
-  display: flex;
-  justify-content: center;
-}
-
-/* Formulário de novo aluguel */
-.loan-form {
-  width: 500px;
-  max-width: 90vw;
-  border-radius: 8px;
-  background-color: #ffffff;
-}
-
-.form-header {
+.no-data {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  color: #1b3a5c;
+  gap: 8px;
+  padding: 15px;
+  color: #444444;
+  font-size: 13px;
 }
 
-.loan-form :deep(.q-field--outlined .q-field__control:before),
-.loan-form :deep(.q-field--outlined .q-field__control:hover:before),
-.loan-form :deep(.q-field--outlined .q-field__control:after) {
-  border-color: #1b3a5c;
-}
-
-.date-fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-top: 16px;
-}
-
-.form-actions {
+.pagination-controls {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 24px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-top: 1px solid #eeeeee;
+  color: #34454d;
+  font-size: 13px;
 }
 
-.form-actions .q-btn:last-child {
-  background-color: #1b3a5c;
-  color: #ffffff;
+.page-size-control,
+.page-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.form-actions .cancel-btn {
-  background-color: #ffffff;
-  border: 1px solid #1b3a5c;
+.page-size-select {
+  width: 75px;
+}
+
+.page-label {
+  min-width: 105px;
+  text-align: right;
+}
+
+.loan-confirmation {
+  width: 420px;
+  max-width: 90vw;
+  color: #34454d;
+}
+
+.operation-error {
+  margin-top: 12px;
+  color: #9f2828;
+}
+
+.loan-action-item {
   color: #1b3a5c;
 }
 
@@ -530,10 +876,6 @@ function getStatusClass(status: string) {
 
   .status-filter {
     width: 100%;
-  }
-
-  .date-fields {
-    grid-template-columns: 1fr;
   }
 }
 </style>

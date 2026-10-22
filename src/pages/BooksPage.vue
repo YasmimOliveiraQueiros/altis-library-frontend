@@ -145,6 +145,7 @@
             outlined
             :options="pageSizeOptions"
             class="page-size-select"
+            popup-content-class="filter-select-menu"
             aria-label="Linhas por página"
             @update:model-value="changePageSize"
           />

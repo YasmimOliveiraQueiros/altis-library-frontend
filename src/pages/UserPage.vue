@@ -24,16 +24,7 @@
         dense
         placeholder="Buscar por nome ou email"
         class="campo-busca"
-        @keyup.enter="carregarUsuarios"
-      />
-
-      <q-select
-        v-model="filtroStatus"
-        outlined
-        dense
-        :options="opcoesStatus"
-        class="filtro-status filter-select"
-        popup-content-class="filter-select-menu"
+        @keyup.enter="pesquisarUsuarios"
       />
 
     </section>
@@ -41,16 +32,14 @@
     <section class="tabela">
       <q-table
         flat
-        :rows="usuariosFiltrados"
+        :rows="usuarios"
         :columns="colunas"
         row-key="id"
         :loading="carregando"
         hide-pagination
+        hide-bottom
         :rows-per-page-options="[0]"
-        :no-data-label="
-          erro 
-          ? erro 
-          : 'Nenhum usuário encontrado.'"
+        :no-data-label="noDataLabel"
         class="user-table">
       
       <template #body-cell-acao="props">
@@ -66,6 +55,44 @@
         </q-td>
       </template>
      </q-table>
+
+      <div class="pagination-controls">
+        <div class="page-size-control">
+          <span>Linhas por página</span>
+          <q-select
+            v-model="tamanhoPagina"
+            dense
+            outlined
+            :options="opcoesTamanhoPagina"
+            class="page-size-select"
+            popup-content-class="filter-select-menu"
+            aria-label="Linhas por página"
+            @update:model-value="alterarTamanhoPagina"
+          />
+        </div>
+
+        <div class="page-navigation">
+          <span class="page-label">{{ pageLabel }}</span>
+          <q-btn
+            flat
+            round
+            dense
+            icon="chevron_left"
+            aria-label="Página anterior"
+            :disable="carregando || pagina === 0 || totalPaginas === 0"
+            @click="irParaPaginaAnterior"
+          />
+          <q-btn
+            flat
+            round
+            dense
+            icon="chevron_right"
+            aria-label="Próxima página"
+            :disable="carregando || pagina + 1 >= totalPaginas"
+            @click="irParaProximaPagina"
+          />
+        </div>
+      </div>
     </section>
   </q-page>  
 </template>
@@ -81,27 +108,16 @@ import { useQuasar } from 'quasar';
 
 const $q = useQuasar();
 const campoBusca = ref('');
-const filtroStatus = ref('Todos os status');
+const buscaAplicada = ref('');
+const opcoesTamanhoPagina = [10, 25, 50, 100];
+const pagina = ref(0);
+const tamanhoPagina = ref(10);
+const totalPaginas = ref(0);
+const totalEncontrado = ref(0);
 
-const opcoesStatus = [
-  'Todos os status',
-  'Ativo',
-  'Inativo',
-];
 
 const usuarios = ref<UserResponse[]>([]);
 
-const usuariosFiltrados = computed(() => {
-  if (filtroStatus.value === 'Ativo') {
-    return usuarios.value.filter((usuario) => usuario.active);
-  }
-
-  if (filtroStatus.value === 'Inativo') {
-    return usuarios.value.filter((usuario) => !usuario.active);
-  }
-
-  return usuarios.value;
-});
 
 const totalAtivos = ref(0);
 const totalInativos = ref(0);
@@ -113,53 +129,65 @@ const statisticCards = computed(() => [
   { label: 'Total', value: totalUsuarios.value, indicatorClass: 'total' },
 ]);
 
+const pageLabel = computed(() =>
+  totalPaginas.value > 0
+    ? `Página ${pagina.value + 1} de ${totalPaginas.value} (${totalEncontrado.value} na pesquisa)`
+    : 'Nenhuma página',
+);
+
 const carregando = ref(false);
 const erro = ref('');
 
+const noDataLabel = computed(() => erro.value || 'Nenhum usu\u00e1rio encontrado.');
 
-async function carregarUsuarios() {
+async function carregarUsuarios(atualizarEstatisticas = false) {
   carregando.value = true;
   erro.value = '';
 
   try {
-    const tamanhoPagina = 100;
-    let pagina = 0;
-    let totalPaginas = 1;
-    let ativos = 0;
-    let inativos = 0;
-    let total = 0;
+    if (atualizarEstatisticas) {
+      const tamanhoPagina = 100;
+      let pagina = 0;
+      let totalPaginas = 1;
+      let ativos = 0;
+      let inativos = 0;
+      let total = 0;
 
-    do {
-      const resposta = await UserService.getUsers({
-        page: pagina,
-        size: tamanhoPagina,
-      });
+      do {
+        const resposta = await UserService.getUsers({
+          page: pagina,
+          size: tamanhoPagina,
+        });
 
-      total = resposta.totalElements;
-      totalPaginas = resposta.totalPages;
+        total = resposta.totalElements;
+        totalPaginas = resposta.totalPages;
 
-      for (const usuario of resposta.content) {
-        if (usuario.active) {
-          ativos++;
-        } else {
-          inativos++;
+        for (const usuario of resposta.content) {
+          if (usuario.active) {
+            ativos++;
+          } else {
+            inativos++;
+          }
         }
-      }
 
-      pagina++;
-    } while (pagina < totalPaginas);
+        pagina++;
+      } while (pagina < totalPaginas);
 
-    totalAtivos.value = ativos;
-    totalInativos.value = inativos;
-    totalUsuarios.value = total;
+      totalAtivos.value = ativos;
+      totalInativos.value = inativos;
+      totalUsuarios.value = total;
+    }
 
     const respostaTabela = await UserService.getUsers({
-      search: campoBusca.value.trim(),
-      page: 0,
-      size: 10,
+      ...(buscaAplicada.value ? { search: buscaAplicada.value } : {}),
+      page: pagina.value,
+      size: tamanhoPagina.value,
     });
 
-    usuarios.value = respostaTabela.content;
+    usuarios.value = respostaTabela.content ?? [];
+    pagina.value = respostaTabela.number;
+    totalEncontrado.value = respostaTabela.totalElements;
+    totalPaginas.value = respostaTabela.totalPages;
   } catch (error) {
     console.error('Erro ao carregar usuários:', error);
     erro.value = 'Não foi possível carregar os usuários.';
@@ -173,7 +201,7 @@ async function alternarStatus(usuario: UserResponse) {
 
   try {
     await UserService.updateStatus(usuario.id, novoStatus);
-    await carregarUsuarios();
+    await carregarUsuarios(true);
 
     $q.notify({
       type: 'positive',
@@ -195,8 +223,31 @@ async function alternarStatus(usuario: UserResponse) {
   }
 }
 
-onMounted(() => {
+function pesquisarUsuarios() {
+  buscaAplicada.value = campoBusca.value.trim();
+  pagina.value = 0;
   void carregarUsuarios();
+}
+
+function alterarTamanhoPagina() {
+  pagina.value = 0;
+  void carregarUsuarios();
+}
+
+function irParaPaginaAnterior() {
+  if (pagina.value === 0) return;
+  pagina.value--;
+  void carregarUsuarios();
+}
+
+function irParaProximaPagina() {
+  if (pagina.value + 1 >= totalPaginas.value) return;
+  pagina.value++;
+  void carregarUsuarios();
+}
+
+onMounted(() => {
+  void carregarUsuarios(true);
 });
 
 const colunas: QTableColumn[] = [
@@ -318,9 +369,6 @@ const colunas: QTableColumn[] = [
   flex: 1;
 }
 
-.filtro-status {
-  width: 180px;
-}
 
 .tabela {
   width: 100%;
@@ -349,15 +397,39 @@ const colunas: QTableColumn[] = [
   font-size: 13px;
 }
 
+.pagination-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-top: 1px solid #eeeeee;
+  color: #34454d;
+  font-size: 13px;
+}
+
+.page-size-control,
+.page-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-size-select {
+  width: 75px;
+}
+
+.page-label {
+  min-width: 105px;
+  text-align: right;
+}
+
 @media (max-width: 700px) {
   .pesquisa {
     align-items: stretch;
     flex-direction: column;
     gap: 12px;
-  }
-
-  .filtro-status {
-    width: 100%;
   }
 }
 </style>
