@@ -9,7 +9,7 @@
 
       <q-item
         clickable
-        to="/dashboard"
+        :to="dashboardPath"
         exact
         active-class="menu-item-active"
       >
@@ -22,7 +22,7 @@
         </q-item-section>
       </q-item>
 
-      <q-item
+      <q-item v-if="authStore.isAdmin"
         clickable
         to="/alugueis"
         active-class="menu-item-active"
@@ -36,7 +36,7 @@
         </q-item-section>
       </q-item>
 
-      <q-item
+      <q-item v-if="authStore.isAdmin"
         clickable
         to="/livros"
         active-class="menu-item-active"
@@ -50,7 +50,7 @@
         </q-item-section>
       </q-item>
 
-      <q-item
+      <q-item v-if="authStore.isAdmin"
         clickable
         to="/editoras"
         active-class="menu-item-active"
@@ -64,7 +64,7 @@
         </q-item-section>
       </q-item>
 
-      <q-item
+      <q-item v-if="authStore.isAdmin"
         clickable
         to="/usuarios"
         active-class="menu-item-active"
@@ -80,12 +80,20 @@
 
     </q-list>
 
-    <div class="admin">
+    <div v-if="authStore.isAdmin" class="admin">
       Admin
     </div>
 
   </div>
 </template>
+
+<script setup lang="ts">
+import { computed } from 'vue';
+import { useAuthStore } from '@/stores/Auth/AuthStore';
+
+const authStore = useAuthStore();
+const dashboardPath = computed(() => authStore.isAdmin ? '/dashboard' : '/meu-dashboard');
+</script>
 
 <style scoped>
 .sidebar {

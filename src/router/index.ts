@@ -40,6 +40,16 @@ export default defineRouter(({ store }) => {
     if (to.matched.some((record) => record.meta.requiresAuth) && !authStore.isAuthenticated) {
       return '/login';
     }
+    if (to.path === '/login' && authStore.isAuthenticated) {
+      return authStore.isAdmin ? '/dashboard' : '/meu-dashboard';
+    }
+    const roles = to.meta.roles as string[] | undefined;
+    if (roles && !roles.includes(authStore.role ?? '')) {
+      return authStore.isAdmin ? '/dashboard' : authStore.isAuthenticated ? '/meu-dashboard' : '/login';
+    }
+    if (to.path === '/' || to.path === '') {
+      return authStore.isAdmin ? '/dashboard' : authStore.isAuthenticated ? '/meu-dashboard' : '/login';
+    }
   });
 
   return Router;

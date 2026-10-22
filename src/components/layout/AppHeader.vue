@@ -22,13 +22,15 @@
 
       <q-space />
 
-      <ProfileMenu :is-admin="true" />
+      <ProfileMenu :is-admin="authStore.isAdmin" />
     </q-toolbar>
   </q-header>
 </template>
 
 <script setup lang="ts">
 import ProfileMenu from '@/components/layout/ProfileMenu/ProfileMenu.vue';
+import { useAuthStore } from '@/stores/Auth/AuthStore';
+const authStore = useAuthStore();
 defineProps<{
   subtitle: string;
 }>();

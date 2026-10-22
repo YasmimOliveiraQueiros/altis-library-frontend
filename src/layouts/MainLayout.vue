@@ -26,9 +26,11 @@ import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import SidebarMenu from '@/components/layout/SidebarMenu.vue';
 import AppHeader from '@/components/layout/AppHeader.vue';
+import { useAuthStore } from '@/stores/Auth/AuthStore';
 
 const leftDrawerOpen = ref(false);
 const route = useRoute();
+const authStore = useAuthStore();
 
 const subtitles: Record<string, string> = {
   '/': 'Visão geral do sistema',
@@ -38,7 +40,7 @@ const subtitles: Record<string, string> = {
   '/usuarios': 'Controle de usuários',
 };
 
-const subtitle = computed(() => subtitles[route.path] ?? 'Visão geral do sistema');
+const subtitle = computed(() => authStore.role === 'USER' ? 'Seu painel de leitura' : subtitles[route.path] ?? 'Visão geral do sistema');
 
 function toggleLeftDrawer() {
   leftDrawerOpen.value = !leftDrawerOpen.value;

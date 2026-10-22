@@ -4,7 +4,7 @@
       flat
       round
       class="profile-avatar">
-      LF
+      {{ isAdmin ? 'LF' : '' }}
 
       <q-menu>
         <q-list class="profile-list">
