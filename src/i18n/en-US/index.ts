@@ -2,7 +2,7 @@ export default {
   profile: {
     editProfile: 'Edit profile',
 
-    languageLabel: 'Language',
+    languageLabel: 'Change language',
 
     language: {
       portuguese: 'Portuguese',
@@ -14,9 +14,27 @@ export default {
     deleteAccount: 'Delete account',
   },
 
+  navigation: {
+    openMenu: 'Open menu',
+    dashboard: 'Dashboard',
+    loans: 'Loans',
+    books: 'Books',
+    publishers: 'Publishers',
+    users: 'Users',
+    admin: 'Administrator',
+    subtitles: {
+      overview: 'System overview',
+      loans: 'Book loan management',
+      books: 'Book management',
+      publishers: 'Publisher management',
+      users: 'User management',
+    },
+  },
+
   readerDashboard: {
     greeting: 'Hello',
     greetingGeneric: 'Hello',
+    profileAvatar: 'User profile icon',
     subtitle: 'Your reading dashboard',
     activeLoans: 'Borrowed',
     latestBook: 'Last book borrowed',
@@ -30,7 +48,15 @@ export default {
     historyError: 'Your complete history could not be loaded. Indicators are unavailable.',
     tableError: 'Your loans could not be loaded.',
     retry: 'Try again',
-    status: { PENDING: 'Pending', OVERDUE: 'Overdue', RETURNED: 'Returned', RETURNED_LATE: 'Returned late' },
+    recordsPerPage: 'Records per page',
+    pagination: '{first}–{last} of {total}',
+    emptyPagination: '0 records',
+    status: {
+      PENDING: 'Pending',
+      OVERDUE: 'Overdue',
+      RETURNED: 'Returned',
+      RETURNED_LATE: 'Returned late',
+    },
   },
 
   failed: 'Action failed',

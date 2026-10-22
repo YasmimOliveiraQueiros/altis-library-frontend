@@ -23,16 +23,6 @@
               {{ t('profile.logout') }}
             </q-item-section>
           </q-item>
-
-          <q-item 
-          v-if="!isAdmin"
-          class="delete-account"
-          clickable>
-            <q-item-section>
-              Encerrar conta
-            </q-item-section>
-          </q-item>
-
         </q-list>
       </q-menu>
     </q-btn>
@@ -85,9 +75,5 @@ const showLanguageDialog = ref(false);
   min-height: 40px;
   color: #1b3a5c;
   font-size: 14px;
-}
-
-.delete-account {
-  color: #d32f2f;
 }
 </style>

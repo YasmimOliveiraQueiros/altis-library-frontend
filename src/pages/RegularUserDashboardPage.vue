@@ -1,24 +1,25 @@
 <template>
   <q-page class="reader-dashboard">
-    <header class="welcome-row">
-      <div>
-        <h1>{{ greeting }}</h1>
-        <p>{{ t('readerDashboard.subtitle') }}</p>
-      </div>
-      <div v-if="initials" class="user-avatar" aria-label="Avatar do usuário">{{ initials }}</div>
-    </header>
-
     <q-banner v-if="historyError" dense class="error-banner" role="alert">
       {{ t('readerDashboard.historyError') }}
       <template #action>
-        <q-btn flat :label="t('readerDashboard.retry')" :loading="historyLoading" @click="loadHistory" />
+        <q-btn
+          flat
+          :label="t('readerDashboard.retry')"
+          :loading="historyLoading"
+          @click="loadHistory"
+        />
       </template>
     </q-banner>
 
     <section class="summary-cards">
       <q-card flat bordered class="summary-card active-card">
-        <div class="summary-label"><span class="dot"></span>{{ t('readerDashboard.activeLoans') }}</div>
-        <div class="summary-value">{{ historyLoading ? '—' : historyError ? '—' : activeLoanCount }}</div>
+        <div class="summary-label">
+          <span class="dot"></span>{{ t('readerDashboard.activeLoans') }}
+        </div>
+        <div class="summary-value">
+          {{ historyLoading ? '—' : historyError ? '—' : activeLoanCount }}
+        </div>
       </q-card>
       <q-card flat bordered class="summary-card">
         <div class="summary-label">{{ t('readerDashboard.latestBook') }}</div>
@@ -43,6 +44,8 @@
         row-key="id"
         :loading="tableLoading"
         :rows-per-page-options="[10, 25, 50]"
+        :rows-per-page-label="t('readerDashboard.recordsPerPage')"
+        :pagination-label="paginationLabel"
         @request="onTableRequest"
       >
         <template #body-cell-loanDate="props">
@@ -71,7 +74,7 @@ import { computed, onMounted, ref } from 'vue';
 import type { QTableColumn } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { LoanService } from '@/services/LoanService';
-import type { LoanResponse, LoanStatus, SortDirection } from '@/types/Loan';
+import type { LoanResponse, SortDirection } from '@/types/Loan';
 
 const { t, locale } = useI18n();
 const pageSize = 100;
@@ -81,16 +84,23 @@ const historyError = ref(false);
 const tableLoading = ref(false);
 const tableError = ref('');
 const totalRows = ref(0);
-const pagination = ref({ page: 1, rowsPerPage: 10, sortBy: 'loanDate', descending: true, rowsNumber: 0 });
+const pagination = ref({
+  page: 1,
+  rowsPerPage: 10,
+  sortBy: 'loanDate',
+  descending: true,
+  rowsNumber: 0,
+});
 
-// The current login contract has no display name, so no name or initials are fabricated.
-const displayName = computed(() => '');
-const greeting = computed(() => displayName.value ? `${t('readerDashboard.greeting')} ${displayName.value}` : t('readerDashboard.greetingGeneric'));
-const initials = computed(() => displayName.value.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toLocaleUpperCase()).join(''));
-const activeLoanCount = computed(() => loans.value.filter((loan) => loan.status === 'PENDING' || loan.status === 'OVERDUE').length);
+const activeLoanCount = computed(
+  () => loans.value.filter((loan) => loan.status === 'PENDING' || loan.status === 'OVERDUE').length,
+);
 
-const latestBook = computed(() => [...loans.value]
-  .sort((a, b) => dateValue(b.loanDate) - dateValue(a.loanDate) || b.id - a.id)[0]?.bookTitle ?? '—');
+const latestBook = computed(
+  () =>
+    [...loans.value].sort((a, b) => dateValue(b.loanDate) - dateValue(a.loanDate) || b.id - a.id)[0]
+      ?.bookTitle ?? '—',
+);
 
 const mostRentedBook = computed(() => {
   const counts = new Map<number, { title: string; count: number }>();
@@ -98,25 +108,49 @@ const mostRentedBook = computed(() => {
     const current = counts.get(loan.bookId);
     counts.set(loan.bookId, { title: loan.bookTitle, count: (current?.count ?? 0) + 1 });
   }
-  return [...counts.entries()]
-    .sort(([idA, a], [idB, b]) => b.count - a.count || a.title.localeCompare(b.title) || idA - idB)[0]?.[1].title ?? '—';
+  return (
+    [...counts.entries()].sort(
+      ([idA, a], [idB, b]) => b.count - a.count || a.title.localeCompare(b.title) || idA - idB,
+    )[0]?.[1].title ?? '—'
+  );
 });
 
 const columns = computed<QTableColumn<LoanResponse>[]>(() => [
   { name: 'bookTitle', label: t('readerDashboard.book'), field: 'bookTitle', align: 'left' },
   { name: 'loanDate', label: t('readerDashboard.loanDate'), field: 'loanDate', align: 'center' },
-  { name: 'returnDate', label: t('readerDashboard.returnDate'), field: 'returnDate', align: 'center' },
+  {
+    name: 'returnDate',
+    label: t('readerDashboard.returnDate'),
+    field: 'returnDate',
+    align: 'center',
+  },
   { name: 'status', label: t('readerDashboard.statusLabel'), field: 'status', align: 'center' },
 ]);
+
+function paginationLabel(firstRow: number, lastRow: number, totalRows: number): string {
+  if (totalRows === 0) return t('readerDashboard.emptyPagination');
+
+  return t('readerDashboard.pagination', { first: firstRow, last: lastRow, total: totalRows });
+}
 
 async function loadHistory() {
   historyLoading.value = true;
   historyError.value = false;
   try {
-    const first = await LoanService.getMyLoans({ page: 0, size: pageSize, sortBy: 'loanDate', sortDirection: 'DESC' });
+    const first = await LoanService.getMyLoans({
+      page: 0,
+      size: pageSize,
+      sortBy: 'loanDate',
+      sortDirection: 'DESC',
+    });
     const complete = [...first.content];
     for (let page = 1; page < first.totalPages; page++) {
-      const response = await LoanService.getMyLoans({ page, size: pageSize, sortBy: 'loanDate', sortDirection: 'DESC' });
+      const response = await LoanService.getMyLoans({
+        page,
+        size: pageSize,
+        sortBy: 'loanDate',
+        sortDirection: 'DESC',
+      });
       complete.push(...response.content);
     }
     loans.value = complete;
@@ -128,19 +162,31 @@ async function loadHistory() {
   }
 }
 
-async function loadTablePage(page = pagination.value.page, rowsPerPage = pagination.value.rowsPerPage, sortBy = 'loanDate', descending = true) {
+async function loadTablePage(
+  page = pagination.value.page,
+  rowsPerPage = pagination.value.rowsPerPage,
+  sortBy = 'loanDate',
+  descending = true,
+) {
   tableLoading.value = true;
   tableError.value = '';
   try {
+    const sortDirection: SortDirection = descending ? 'DESC' : 'ASC';
     const response = await LoanService.getMyLoans({
       page: page - 1,
       size: rowsPerPage,
       sortBy,
-      sortDirection: descending ? 'DESC' as SortDirection : 'ASC' as SortDirection,
+      sortDirection,
     });
     loansPage.value = response.content;
     totalRows.value = response.totalElements;
-    pagination.value = { page: response.number + 1, rowsPerPage, sortBy, descending, rowsNumber: response.totalElements };
+    pagination.value = {
+      page: response.number + 1,
+      rowsPerPage,
+      sortBy,
+      descending,
+      rowsNumber: response.totalElements,
+    };
   } catch {
     loansPage.value = [];
     totalRows.value = 0;
@@ -151,8 +197,17 @@ async function loadTablePage(page = pagination.value.page, rowsPerPage = paginat
 }
 
 const loansPage = ref<LoanResponse[]>([]);
-async function onTableRequest({ pagination: requested }: { pagination: { page: number; rowsPerPage: number; sortBy?: string; descending: boolean } }) {
-  await loadTablePage(requested.page, requested.rowsPerPage, requested.sortBy || 'loanDate', requested.descending);
+async function onTableRequest({
+  pagination: requested,
+}: {
+  pagination: { page: number; rowsPerPage: number; sortBy?: string; descending: boolean };
+}) {
+  await loadTablePage(
+    requested.page,
+    requested.rowsPerPage,
+    requested.sortBy || 'loanDate',
+    requested.descending,
+  );
 }
 
 function dateValue(value: string): number {
@@ -162,7 +217,13 @@ function dateValue(value: string): number {
 
 function formatDate(value: string): string {
   const parsed = new Date(`${value.slice(0, 10)}T00:00:00`);
-  return Number.isNaN(parsed.getTime()) ? value : new Intl.DateTimeFormat(locale.value, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(parsed);
+  return Number.isNaN(parsed.getTime())
+    ? value
+    : new Intl.DateTimeFormat(locale.value, {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(parsed);
 }
 
 onMounted(() => {
@@ -172,30 +233,156 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.reader-dashboard { min-height: calc(100vh - 88px); padding: 18px 20px 28px; background: #f4f4f4; color: #1b3a5c; }
-.welcome-row { display: flex; align-items: center; justify-content: space-between; min-height: 70px; padding: 0 20px 12px; border-bottom: 1px solid #c7c7c7; margin-bottom: 14px; }
-.welcome-row h1 { margin: 0; font-size: 21px; font-weight: 700; }
-.welcome-row p { margin: 1px 0 0; font-size: 14px; }
-.user-avatar { display: grid; width: 58px; height: 58px; place-items: center; border-radius: 50%; background: #1b3a5c; color: white; font-size: 20px; font-weight: 700; }
-.summary-cards { display: grid; grid-template-columns: 130px 160px minmax(240px, 1fr); gap: 14px; margin-bottom: 28px; }
-.summary-card, .loans-panel { border: 1px solid #1b3a5c; border-radius: 6px; background: white; }
-.summary-card { min-height: 82px; padding: 9px 12px; }
-.summary-label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: #19a974; }
-.summary-value { margin-top: 3px; text-align: center; font-size: 30px; line-height: 34px; font-weight: 700; }
-.book-value { overflow: hidden; margin-top: 8px; font-size: 15px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.favorite-card { display: flex; flex-direction: column; justify-content: space-between; }
-.favorite-value { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 15px; font-weight: 600; }
-.favorite-value span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.table-heading { padding: 10px 12px; border-bottom: 1px solid #ddd; font-size: 14px; }
-.loans-panel :deep(th) { color: #1b3a5c; font-weight: 600; }
-.loans-panel :deep(td) { color: #333; }
-.status-pill { display: inline-block; min-width: 82px; padding: 4px 10px; border-radius: 14px; color: white; font-size: 12px; font-weight: 600; }
-.status-pending { background: #f5a623; }
-.status-overdue { background: #e94b4b; }
-.status-returned { background: #19a974; }
-.status-returned_late { background: #b42318; }
-.error-banner { margin-bottom: 12px; color: #b42318; background: #fff1f0; }
-.empty-state { width: 100%; padding: 22px; color: #64748b; text-align: center; }
-@media (max-width: 700px) { .reader-dashboard { padding: 12px; } .summary-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } .favorite-card { grid-column: 1 / -1; } }
+.reader-dashboard {
+  min-height: calc(100vh - 88px);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 14px 20px 24px;
+  background: #f4f4f4;
+  color: #1b3a5c;
+  overflow-x: clip;
+}
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.summary-card,
+.loans-panel {
+  min-width: 0;
+  border: 1px solid #1b3a5c;
+  border-radius: 6px;
+  background: white;
+}
+.summary-card {
+  display: flex;
+  min-height: 136px;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+}
+.summary-label {
+  display: flex;
+  min-height: 40px;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.dot {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: #19a974;
+}
+.summary-value {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  font-size: 30px;
+  line-height: 34px;
+  font-weight: 700;
+}
+.book-value {
+  margin-top: auto;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+.favorite-value {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: auto;
+  min-width: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+.favorite-value :deep(.q-icon) {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+.favorite-value span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.table-heading {
+  padding: 10px 12px;
+  border-bottom: 1px solid #ddd;
+  font-size: 14px;
+}
+.loans-panel :deep(th) {
+  color: #1b3a5c;
+  font-weight: 600;
+}
+.loans-panel :deep(.q-table__middle) {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.loans-panel :deep(td) {
+  color: #333;
+}
+.status-pill {
+  display: inline-block;
+  min-width: 82px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+}
+.status-pending {
+  background: #f5a623;
+}
+.status-overdue {
+  background: #e94b4b;
+}
+.status-returned {
+  background: #19a974;
+}
+.status-returned_late {
+  background: #b42318;
+}
+.error-banner {
+  margin-bottom: 12px;
+  color: #b42318;
+  background: #fff1f0;
+}
+.empty-state {
+  width: 100%;
+  padding: 22px;
+  color: #64748b;
+  text-align: center;
+}
+@media (max-width: 900px) {
+  .summary-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .reader-dashboard {
+    padding: 16px 12px 24px;
+  }
+  .summary-cards {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .summary-card {
+    min-height: 120px;
+    padding: 16px;
+  }
+  .loans-panel :deep(th),
+  .loans-panel :deep(td) {
+    white-space: nowrap;
+  }
+}
 </style>
