@@ -22,7 +22,7 @@
         v-model="campoBusca"
         outlined
         dense
-        placeholder="Buscar por nome ou email"
+        :placeholder="t('users.searchPlaceholder')"
         class="campo-busca"
         @keyup.enter="pesquisarUsuarios"
       />
@@ -48,7 +48,7 @@
           outline
           dense
           no-caps
-          :label="props.row.active ? 'Inativar' : 'Ativar'"
+          :label="props.row.active ? t('users.actions.deactivate') : t('users.actions.activate')"
           :loading="carregando"
           @click="alternarStatus(props.row)"
           />
@@ -58,7 +58,7 @@
 
       <div class="pagination-controls">
         <div class="page-size-control">
-          <span>Linhas por página</span>
+          <span>{{ t('users.pagination.rowsPerPage') }}</span>
           <q-select
             v-model="tamanhoPagina"
             dense
@@ -66,7 +66,7 @@
             :options="opcoesTamanhoPagina"
             class="page-size-select"
             popup-content-class="filter-select-menu"
-            aria-label="Linhas por página"
+            :aria-label="t('users.pagination.rowsPerPage')"
             @update:model-value="alterarTamanhoPagina"
           />
         </div>
@@ -78,7 +78,7 @@
             round
             dense
             icon="chevron_left"
-            aria-label="Página anterior"
+            :aria-label="t('users.pagination.previous')"
             :disable="carregando || pagina === 0 || totalPaginas === 0"
             @click="irParaPaginaAnterior"
           />
@@ -87,7 +87,7 @@
             round
             dense
             icon="chevron_right"
-            aria-label="Próxima página"
+            :aria-label="t('users.pagination.next')"
             :disable="carregando || pagina + 1 >= totalPaginas"
             @click="irParaProximaPagina"
           />
@@ -101,12 +101,15 @@
 <script setup lang="ts">
 
 import { ref, onMounted, computed } from 'vue';
+import axios from 'axios';
+import { useI18n } from 'vue-i18n';
 import type { QTableColumn } from 'quasar';
 import { UserService } from '@/services/UserService';
 import type { UserResponse } from '@/types/User';
 import { useQuasar } from 'quasar';
 
 const $q = useQuasar();
+const { t } = useI18n();
 const campoBusca = ref('');
 const buscaAplicada = ref('');
 const opcoesTamanhoPagina = [10, 25, 50, 100];
@@ -124,21 +127,35 @@ const totalInativos = ref(0);
 const totalUsuarios = ref(0);
 
 const statisticCards = computed(() => [
-  { label: 'Ativos', value: totalAtivos.value, indicatorClass: 'ativo' },
-  { label: 'Inativos', value: totalInativos.value, indicatorClass: 'inativo' },
-  { label: 'Total', value: totalUsuarios.value, indicatorClass: 'total' },
+  { label: t('users.stats.active'), value: totalAtivos.value, indicatorClass: 'ativo' },
+  { label: t('users.stats.inactive'), value: totalInativos.value, indicatorClass: 'inativo' },
+  { label: t('users.stats.total'), value: totalUsuarios.value, indicatorClass: 'total' },
 ]);
 
 const pageLabel = computed(() =>
   totalPaginas.value > 0
-    ? `Página ${pagina.value + 1} de ${totalPaginas.value} (${totalEncontrado.value} na pesquisa)`
-    : 'Nenhuma página',
+    ? t('users.pagination.page', {
+        current: pagina.value + 1,
+        total: totalPaginas.value,
+        count: totalEncontrado.value,
+      })
+    : t('users.pagination.noPages'),
 );
 
 const carregando = ref(false);
 const erro = ref('');
 
-const noDataLabel = computed(() => erro.value || 'Nenhum usu\u00e1rio encontrado.');
+const noDataLabel = computed(() => erro.value || t('users.empty'));
+
+function getRequestErrorMessage(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    if (!error.response) return t('users.errors.serviceUnavailable');
+    if (error.response.status === 401) return t('users.errors.unauthorized');
+    if (error.response.status === 403) return t('users.errors.forbidden');
+  }
+
+  return t('users.errors.generic');
+}
 
 async function carregarUsuarios(atualizarEstatisticas = false) {
   carregando.value = true;
@@ -188,9 +205,9 @@ async function carregarUsuarios(atualizarEstatisticas = false) {
     pagina.value = respostaTabela.number;
     totalEncontrado.value = respostaTabela.totalElements;
     totalPaginas.value = respostaTabela.totalPages;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao carregar usuários:', error);
-    erro.value = 'Não foi possível carregar os usuários.';
+    erro.value = getRequestErrorMessage(error);
   } finally {
     carregando.value = false;
   }
@@ -206,17 +223,17 @@ async function alternarStatus(usuario: UserResponse) {
     $q.notify({
       type: 'positive',
       message: novoStatus
-      ? 'Usuário ativado com sucesso.'
-      : 'Usuário inativado com sucesso.',
+      ? t('users.success.activated')
+      : t('users.success.deactivated'),
       position: 'top-right',
       timeout: 3000,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao atualizar status do usuário:', error);
 
     $q.notify({
       type: 'negative',
-      message: 'Não foi possível atualizar o status do usuário.',
+      message: getRequestErrorMessage(error),
       position: 'top-right',
       timeout: 3000,
     });
@@ -250,44 +267,38 @@ onMounted(() => {
   void carregarUsuarios(true);
 });
 
-const colunas: QTableColumn[] = [
+const colunas = computed<QTableColumn[]>(() => [
   {
     name: 'nome',
-    label: 'Nome',
+    label: t('users.table.name'),
     field: 'name',
     align: 'left',
   },
   {
     name: 'email',
-    label: 'Email',
+    label: t('users.table.email'),
     field: 'email',
     align: 'left',
   },
   {
     name: 'telefone',
-    label: 'Telefone',
+    label: t('users.table.phone'),
     field: 'phone',
     align: 'left',
   },
   {
-    name: 'livros',
-    label: 'Livros alugados',
-    field: 'livros',
-    align: 'center',
-  },
-  {
     name: 'status',
-    label: 'Status',
-    field: (row: UserResponse) => row.active ? 'Ativo' : 'Inativo',
+    label: t('users.table.status'),
+    field: (row: UserResponse) => row.active ? t('users.status.active') : t('users.status.inactive'),
     align: 'center',
   },
   {
     name: 'acao',
-    label: 'Ação',
+    label: t('users.table.action'),
     field: 'acao',
     align: 'center',
   },
-];
+]);
 
 </script>
 
