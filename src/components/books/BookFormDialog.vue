@@ -3,7 +3,7 @@
     <q-card class="book-form">
       <q-card-section class="form-header q-pt-lg q-px-lg q-pb-sm">
         <div class="text-h6">
-          {{ mode === 'edit' ? 'Editar livro' : 'Novo livro' }}
+          {{ mode === 'edit' ? t('books.form.editTitle') : t('books.form.newTitle') }}
         </div>
 
         <q-btn flat round dense icon="close" :disable="loading" @click="cancelDialog" />
@@ -14,29 +14,29 @@
           <div class="book-fields">
             <q-input
               v-model="form.title"
-              label="Título"
-              placeholder="Título do livro"
+              :label="t('books.form.title')"
+              :placeholder="t('books.form.titlePlaceholder')"
               outlined
               hide-bottom-space
               :disable="loading"
-              :rules="[(value) => !!String(value ?? '').trim() || 'Informe o título']"
+              :rules="[(value) => !!String(value ?? '').trim() || t('books.validation.titleRequired')]"
             />
 
             <q-input
               v-model="form.author"
-              label="Autor"
-              placeholder="Nome do autor"
+              :label="t('books.form.author')"
+              :placeholder="t('books.form.authorPlaceholder')"
               outlined
               hide-bottom-space
               :disable="loading"
-              :rules="[(value) => !!String(value ?? '').trim() || 'Informe o autor']"
+              :rules="[(value) => !!String(value ?? '').trim() || t('books.validation.authorRequired')]"
             />
 
             <div>
               <q-select
                 v-model="form.publisherId"
-                label="Editora"
-                placeholder="Selecione uma editora"
+                :label="t('books.form.publisher')"
+                :placeholder="t('books.form.publisherPlaceholder')"
                 :options="publishers"
                 option-label="name"
                 option-value="id"
@@ -48,7 +48,7 @@
                 popup-content-class="filter-select-menu"
                 :loading="publishersLoading"
                 :disable="loading || publishersLoading"
-                :rules="[(value) => value !== null || 'Selecione uma editora']"
+                :rules="[(value) => value !== null || t('books.validation.publisherRequired')]"
               >
                 <template #no-option>
                   <q-item>
@@ -65,7 +65,7 @@
 
             <q-input
               v-model.number="form.quantity"
-              label="Quantidade disponível"
+              :label="t('books.form.quantity')"
               type="number"
               min="0"
               step="1"
@@ -73,15 +73,15 @@
               hide-bottom-space
               :disable="loading"
               :rules="[
-                (value) => value !== null && value !== '' || 'Informe a quantidade',
-                (value) => Number.isInteger(Number(value)) || 'Informe um número inteiro',
-                (value) => Number(value) >= 0 || 'A quantidade não pode ser negativa',
+                (value) => value !== null && value !== '' || t('books.validation.quantityRequired'),
+                (value) => Number.isInteger(Number(value)) || t('books.validation.quantityInteger'),
+                (value) => Number(value) >= 0 || t('books.validation.quantityNonnegative'),
               ]"
             />
 
             <q-input
               v-model="form.observations"
-              label="Observações (opcional)"
+              :label="t('books.form.observations')"
               type="textarea"
               outlined
               hide-bottom-space
@@ -95,14 +95,14 @@
 
           <div class="form-actions">
             <q-btn
-              label="Cancelar"
+              :label="t('books.actions.cancel')"
               flat
               class="cancel-btn"
               :disable="loading"
               @click="cancelDialog"
             />
 
-            <q-btn label="Salvar" type="submit" :loading="loading" :disable="loading" />
+            <q-btn :label="t('books.actions.save')" type="submit" :loading="loading" :disable="loading" />
           </div>
         </q-form>
       </q-card-section>
@@ -112,6 +112,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { BookPayload, BookResponse } from '@/types/Book';
 import type { PublisherResponse } from '@/types/Publisher';
 
@@ -144,6 +145,8 @@ const props = withDefaults(
   },
 );
 
+const { t } = useI18n();
+
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
   save: [data: BookPayload];
@@ -158,9 +161,9 @@ const dialog = computed({
 const form = reactive<BookFormData>(createEmptyForm());
 
 const publisherNoOptionsLabel = computed(() => {
-  if (props.publishersLoading) return 'Carregando editoras...';
-  if (props.publishersError) return 'Não foi possível carregar as editoras';
-  return 'Nenhuma editora disponível';
+  if (props.publishersLoading) return t('books.form.publishersLoading');
+  if (props.publishersError) return t('books.form.publishersError');
+  return t('books.form.noPublishers');
 });
 
 watch(

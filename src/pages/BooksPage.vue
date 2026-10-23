@@ -4,7 +4,7 @@
       <div class="stat-card">
         <div class="stat-label">
           <span class="dot available"></span>
-          Exemplares
+          {{ t('books.stats.copies') }}
         </div>
         <div class="stat-value">{{ availableCopiesOnPage }}</div>
       </div>
@@ -12,7 +12,7 @@
       <div class="stat-card">
         <div class="stat-label">
           <span class="dot page-count"></span>
-          Livros nesta página
+          {{ t('books.stats.thisPage') }}
         </div>
         <div class="stat-value">{{ books.length }}</div>
       </div>
@@ -20,14 +20,14 @@
       <div class="stat-card">
         <div class="stat-label">
           <span class="dot total"></span>
-          Total na consulta
+          {{ t('books.stats.total') }}
         </div>
         <div class="stat-value">{{ totalElements }}</div>
       </div>
 
       <q-btn
         class="new-book-button"
-        label="+ Novo livro"
+        :label="t('books.actions.new')"
         unelevated
         :disable="savingBook"
         @click="openCreateBook"
@@ -39,7 +39,7 @@
         v-model="searchInput"
         outlined
         dense
-        placeholder="Buscar por título, autor ou observações"
+        :placeholder="t('books.searchPlaceholder')"
         class="search-input"
         @keyup.enter="searchBooks"
       />
@@ -51,7 +51,7 @@
         :options="sortOptions"
         emit-value
         map-options
-        label="Ordenar por"
+        :label="t('books.sort.label')"
         class="sort-select filter-select"
         popup-content-class="filter-select-menu"
         @update:model-value="changeSort"
@@ -61,9 +61,9 @@
         outline
         dense
         class="sort-direction"
-        :label="sortDirection === 'ASC' ? 'Crescente' : 'Decrescente'"
+        :label="sortDirection === 'ASC' ? t('books.sort.ascending') : t('books.sort.descending')"
         :icon="sortDirection === 'ASC' ? 'arrow_upward' : 'arrow_downward'"
-        :aria-label="`Ordenação ${sortDirection === 'ASC' ? 'crescente' : 'decrescente'}. Alterar direção`"
+        :aria-label="t('books.sort.toggleAria', { direction: sortDirection === 'ASC' ? t('books.sort.ascending').toLowerCase() : t('books.sort.descending').toLowerCase() })"
         @click="toggleSortDirection"
       />
     </section>
@@ -71,17 +71,16 @@
     <q-banner v-if="booksError" dense class="state-banner error-banner" role="alert">
       {{ booksError }}
       <template #action>
-        <q-btn flat label="Tentar novamente" :loading="booksLoading" @click="loadBooks" />
+        <q-btn flat :label="t('books.actions.retry')" :loading="booksLoading" @click="loadBooks" />
       </template>
     </q-banner>
 
     <q-banner v-if="publishersError" dense class="state-banner publisher-banner" role="alert">
-      {{ publishersError }} Os livros continuam disponíveis; os nomes das editoras podem não ser
-      exibidos.
+      {{ publishersError }} {{ t('books.errors.publisherNamesUnavailable') }}
       <template #action>
         <q-btn
           flat
-          label="Tentar novamente"
+          :label="t('books.actions.retry')"
           :loading="publishersLoading"
           @click="loadPublishers"
         />
@@ -112,7 +111,7 @@
               round
               dense
               icon="edit"
-              aria-label="Editar livro"
+              :aria-label="t('books.actions.edit')"
               :disable="savingBook || deletingBookId !== null"
               @click="openEditBook(props.row)"
             />
@@ -122,7 +121,7 @@
               dense
               icon="delete"
               color="negative"
-              aria-label="Excluir livro"
+              :aria-label="t('books.actions.delete')"
               :disable="savingBook || deletingBookId !== null"
               @click="openDeleteConfirmation(props.row)"
             />
@@ -138,7 +137,7 @@
 
       <div class="pagination-controls">
         <div class="page-size-control">
-          <span>Linhas por página</span>
+          <span>{{ t('books.pagination.rowsPerPage') }}</span>
           <q-select
             v-model="pageSize"
             dense
@@ -146,7 +145,7 @@
             :options="pageSizeOptions"
             class="page-size-select"
             popup-content-class="filter-select-menu"
-            aria-label="Linhas por página"
+            :aria-label="t('books.pagination.rowsPerPage')"
             @update:model-value="changePageSize"
           />
         </div>
@@ -158,7 +157,7 @@
             round
             dense
             icon="chevron_left"
-            aria-label="Página anterior"
+            :aria-label="t('books.pagination.previous')"
             :disable="booksLoading || page === 0 || totalPages === 0"
             @click="goToPreviousPage"
           />
@@ -167,7 +166,7 @@
             round
             dense
             icon="chevron_right"
-            aria-label="Próxima página"
+            :aria-label="t('books.pagination.next')"
             :disable="booksLoading || page + 1 >= totalPages"
             @click="goToNextPage"
           />
@@ -190,8 +189,10 @@
 
     <ConfirmDeleteDialog
       v-model="showDeleteConfirmation"
-      title="Excluir livro"
-      message="Tem certeza que deseja excluir o livro"
+      :title="t('books.delete.title')"
+      :message="t('books.delete.message')"
+      :cancel-label="t('books.actions.cancel')"
+      :confirm-label="t('books.actions.delete')"
       :record-name="pendingDeleteBook?.title ?? ''"
       :error-message="deleteErrorMessage"
       :loading="deletingBookId !== null"
@@ -203,6 +204,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import axios from 'axios';
+import { useI18n } from 'vue-i18n';
 import type { QTableColumn } from 'quasar';
 import { useQuasar } from 'quasar';
 import { BookService } from '@/services/BookService';
@@ -218,6 +221,7 @@ interface BookTableRow extends BookResponse {
 }
 
 const $q = useQuasar();
+const { t } = useI18n();
 const searchInput = ref('');
 const appliedSearch = ref('');
 const books = ref<BookResponse[]>([]);
@@ -247,13 +251,13 @@ let publishersRequestId = 0;
 
 const pageSizeOptions = [10, 25, 50];
 
-const sortOptions: { label: string; value: BookSortField }[] = [
+const sortOptions = computed<{ label: string; value: BookSortField }[]>(() => [
   { label: 'ID', value: 'id' },
-  { label: 'Título', value: 'title' },
-  { label: 'Autor', value: 'author' },
-  { label: 'Quantidade disponível', value: 'quantity' },
-  { label: 'Status registrado', value: 'status' },
-];
+  { label: t('books.table.title'), value: 'title' },
+  { label: t('books.table.author'), value: 'author' },
+  { label: t('books.table.quantity'), value: 'quantity' },
+  { label: t('books.table.status'), value: 'status' },
+]);
 
 const availableCopiesOnPage = computed(() =>
   books.value.reduce((total, book) => total + book.quantity, 0),
@@ -266,61 +270,61 @@ const publisherNames = computed(() =>
 const tableRows = computed<BookTableRow[]>(() =>
   books.value.map((book) => ({
     ...book,
-    publisherName: publisherNames.value[book.publisherId] ?? 'Editora não localizada',
+    publisherName: publisherNames.value[book.publisherId] ?? t('books.publisherNotFound'),
     statusLabel: formatBookStatus(book.status),
   })),
 );
 
 const noDataMessage = computed(() =>
-  appliedSearch.value ? 'Nenhum livro encontrado para esta pesquisa.' : 'Ainda não há livros cadastrados.',
+  appliedSearch.value ? t('books.empty.search') : t('books.empty.list'),
 );
 
 const pageLabel = computed(() =>
-  totalPages.value > 0 ? `Página ${page.value + 1} de ${totalPages.value}` : 'Nenhuma página',
+  totalPages.value > 0 ? t('books.pagination.page', { current: page.value + 1, total: totalPages.value }) : t('books.pagination.noPages'),
 );
 
-const columns: QTableColumn<BookTableRow>[] = [
+const columns = computed<QTableColumn<BookTableRow>[]>(() => [
   {
     name: 'title',
-    label: 'Título',
+    label: t('books.table.title'),
     field: 'title',
     align: 'left',
   },
   {
     name: 'author',
-    label: 'Autor',
+    label: t('books.table.author'),
     field: 'author',
     align: 'left',
   },
   {
     name: 'publisher',
-    label: 'Editora',
+    label: t('books.table.publisher'),
     field: 'publisherName',
     align: 'left',
   },
   {
     name: 'quantity',
-    label: 'Quantidade disponível',
+    label: t('books.table.quantity'),
     field: 'quantity',
     align: 'center',
   },
   {
     name: 'status',
-    label: 'Status registrado',
+    label: t('books.table.status'),
     field: 'statusLabel',
     align: 'center',
   },
   {
     name: 'actions',
-    label: 'Ação',
+    label: t('books.table.actions'),
     field: 'id',
     align: 'center',
   },
-];
+]);
 
 function formatBookStatus(status: BookStatus): string {
-  if (status === 'AVAILABLE') return 'Disponível (registrado)';
-  if (status === 'RENTED') return 'Alugado (registrado)';
+  if (status === 'AVAILABLE') return t('books.status.available');
+  if (status === 'RENTED') return t('books.status.rented');
   return status;
 }
 
@@ -349,7 +353,7 @@ async function loadBooks() {
     books.value = [];
     totalElements.value = 0;
     totalPages.value = 0;
-    booksError.value = 'Não foi possível carregar os livros. Tente novamente.';
+    booksError.value = t('books.errors.load');
   } finally {
     if (requestId === booksRequestId) booksLoading.value = false;
   }
@@ -376,7 +380,7 @@ async function loadPublishers() {
     if (requestId !== publishersRequestId) return;
 
     publishers.value = [];
-    publishersError.value = 'Não foi possível carregar as editoras.';
+    publishersError.value = t('books.errors.publishersLoad');
   } finally {
     if (requestId === publishersRequestId) publishersLoading.value = false;
   }
@@ -405,7 +409,7 @@ async function saveBook(payload: BookPayload) {
   const bookId = selectedBookId.value;
 
   if (isEditing && bookId === null) {
-    bookFormError.value = 'Não foi possível identificar o livro para atualização.';
+    bookFormError.value = t('books.errors.updateIdMissing');
     return;
   }
 
@@ -421,10 +425,18 @@ async function saveBook(payload: BookPayload) {
 
     showBookForm.value = false;
     await loadBooks();
-  } catch {
-    bookFormError.value = isEditing
-      ? 'Não foi possível atualizar o livro. Verifique os dados e tente novamente.'
-      : 'Não foi possível cadastrar o livro. Verifique os dados e tente novamente.';
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error) && !error.response) {
+      bookFormError.value = t('books.errors.serviceUnavailable');
+    } else if (axios.isAxiosError(error) && error.response?.status === 400) {
+      bookFormError.value = t('books.errors.validation');
+    } else if (axios.isAxiosError(error) && error.response?.status === 401) {
+      bookFormError.value = t('books.errors.unauthorized');
+    } else if (axios.isAxiosError(error) && error.response?.status === 403) {
+      bookFormError.value = t('books.errors.forbidden');
+    } else {
+      bookFormError.value = isEditing ? t('books.errors.update') : t('books.errors.create');
+    }
   } finally {
     savingBook.value = false;
   }
@@ -447,36 +459,22 @@ function cancelDeleteConfirmation() {
 }
 
 function getDeleteErrorMessage(error: unknown): string {
-  const fallback = 'Não foi possível excluir o livro. Tente novamente.';
+  const fallback = t('books.errors.delete');
   if (!error || typeof error !== 'object' || !('response' in error)) return fallback;
 
   const response = error.response;
   if (!response || typeof response !== 'object') return fallback;
 
-  const details = response as { status?: number; data?: unknown };
-  let backendMessage = '';
-
-  if (typeof details.data === 'string') {
-    backendMessage = details.data;
-  } else if (details.data && typeof details.data === 'object') {
-    const data = details.data as Record<string, unknown>;
-    backendMessage = [data.message, data.detail, data.error]
-      .filter((value): value is string => typeof value === 'string')
-      .join(' ');
-  }
-
+  const details = response as { status?: number };
   if (details.status === 409) {
-    return (
-      backendMessage ||
-      'Não é possível excluir este livro porque existem empréstimos vinculados a ele.'
-    );
+    return t('books.errors.deleteConflict');
   }
-  if (details.status === 404) return backendMessage || 'Este livro não foi encontrado.';
-  if (details.status === 401) return 'Sua autenticação expirou. Entre novamente para continuar.';
-  if (details.status === 403) return 'Você não tem permissão para excluir este livro.';
-  if (details.status === 500) return 'Ocorreu um erro ao excluir o livro. Tente novamente.';
+  if (details.status === 404) return t('books.errors.notFound');
+  if (details.status === 401) return t('books.errors.unauthorized');
+  if (details.status === 403) return t('books.errors.forbidden');
+  if (details.status === 500) return t('books.errors.server');
 
-  return backendMessage || fallback;
+  return fallback;
 }
 
 async function confirmDeleteBook() {
@@ -492,7 +490,7 @@ async function confirmDeleteBook() {
     pendingDeleteBook.value = null;
     $q.notify({
       type: 'positive',
-      message: 'Livro excluído com sucesso.',
+      message: t('books.success.deleted'),
       position: 'top-right',
       timeout: 3000,
     });
