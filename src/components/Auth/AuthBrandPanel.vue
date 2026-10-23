@@ -9,11 +9,17 @@
       </div>
 
       <h1>Altis+ Biblioteca</h1>
-      <p>Sistema de gestão de aluguéis</p>
+      <p>{{ t('auth.brand.subtitle') }}</p>
 
     </div>
   </section>
 </template>
+
+<script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+</script>
 
 <style scoped>
 .brand-panel {

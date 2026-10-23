@@ -1,57 +1,57 @@
 ﻿<template>
   <section class="recovery-view">
     <header class="recovery-header">
-      <h2>{{ isResetStep ? 'Recuperar senha' : 'Recuperar Senha' }}</h2>
+      <h2>{{ t('auth.recovery.title') }}</h2>
     </header>
 
     <q-form class="recovery-form" @submit.prevent="handleSubmit">
       <div class="recovery-field">
-        <label for="recovery-email">E-mail</label>
+        <label for="recovery-email">{{ t('auth.fields.email') }}</label>
         <q-input
           id="recovery-email"
           v-model="email"
           type="email"
-          placeholder="seuemail@email.com"
+          :placeholder="t('auth.fields.emailPlaceholder')"
           outlined
           dense
           autocomplete="email"
           :rules="[
-            (value) => !!value?.trim() || 'Informe seu e-mail',
-            (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || 'Informe um e-mail válido',
+            (value) => !!value?.trim() || t('auth.validation.emailRequired'),
+            (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || t('auth.validation.emailInvalid'),
           ]"
         />
       </div>
 
       <div class="recovery-field">
-        <label for="recovery-cpf">CPF</label>
+        <label for="recovery-cpf">{{ t('auth.fields.cpf') }}</label>
         <q-input
           id="recovery-cpf"
           v-model="cpf"
-          placeholder="000.000.000-00"
+          :placeholder="t('auth.fields.cpfPlaceholder')"
           outlined
           dense
           autocomplete="off"
           :rules="[
-            (value) => !!value?.trim() || 'Informe seu CPF',
-            (value) => isValidCpf(String(value ?? '')) || 'Digite um CPF válido',
+            (value) => !!value?.trim() || t('auth.validation.cpfRequired'),
+            (value) => isValidCpf(String(value ?? '')) || t('auth.validation.cpfInvalid'),
           ]"
         />
       </div>
 
       <template v-if="isResetStep">
         <div class="recovery-field">
-          <label for="recovery-password">Senha</label>
+          <label for="recovery-password">{{ t('auth.fields.password') }}</label>
           <q-input
             id="recovery-password"
             v-model="password"
             :type="showPassword ? 'text' : 'password'"
-            placeholder="Digite sua nova senha"
+            :placeholder="t('auth.fields.newPasswordPlaceholder')"
             outlined
             dense
             autocomplete="new-password"
             :rules="[
-              (value) => !!value || 'Informe sua senha',
-              (value) => String(value ?? '').length >= 15 || 'A senha deve ter no mínimo 15 caracteres',
+              (value) => !!value || t('auth.validation.passwordRequired'),
+              (value) => String(value ?? '').length >= 15 || t('auth.validation.passwordMin'),
             ]"
           >
             <template #append>
@@ -65,18 +65,18 @@
         </div>
 
         <div class="recovery-field">
-          <label for="recovery-confirm-password">Confirmar senha</label>
+          <label for="recovery-confirm-password">{{ t('auth.fields.confirmPassword') }}</label>
           <q-input
             id="recovery-confirm-password"
             v-model="confirmPassword"
             :type="showConfirmPassword ? 'text' : 'password'"
-            placeholder="Confirme sua nova senha"
+            :placeholder="t('auth.fields.confirmNewPasswordPlaceholder')"
             outlined
             dense
             autocomplete="new-password"
             :rules="[
-              (value) => !!value || 'Confirme sua senha',
-              (value) => value === password || 'As senhas não coincidem',
+              (value) => !!value || t('auth.validation.confirmPasswordRequired'),
+              (value) => value === password || t('auth.validation.passwordMismatch'),
             ]"
           >
             <template #append>
@@ -93,7 +93,7 @@
       <div class="recovery-actions">
         <q-btn
           class="recovery-button"
-          label="Confirmar"
+          :label="t('auth.actions.confirm')"
           type="submit"
           unelevated
           no-caps
@@ -103,7 +103,7 @@
         <q-btn
           v-if="isResetStep"
           class="recovery-button"
-          label="Voltar"
+          :label="t('auth.actions.back')"
           type="button"
           unelevated
           no-caps
@@ -113,7 +113,7 @@
         <q-btn
           v-else
           class="recovery-button"
-          label="Voltar ao Login"
+          :label="t('auth.actions.backToLogin')"
           to="/login"
           unelevated
           no-caps
@@ -123,9 +123,9 @@
     </q-form>
 
     <footer class="recovery-footer">
-      <router-link to="/cadastro">Realizar cadastro?</router-link>
+      <router-link to="/cadastro">{{ t('auth.login.register') }}</router-link>
       <router-link class="admin-link" to="/recuperar-senha?tipo=admin">
-        Você é usuário administrador?
+        {{ t('auth.recovery.adminLink') }}
       </router-link>
     </footer>
   </section>
@@ -133,6 +133,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type {
   PasswordRecoveryReset,
   PasswordRecoveryVerification,
@@ -141,6 +142,8 @@ import type {
 defineOptions({
   name: 'PasswordRecoveryForm',
 });
+
+const { t } = useI18n();
 
 type RecoveryStep = 'identify' | 'reset';
 

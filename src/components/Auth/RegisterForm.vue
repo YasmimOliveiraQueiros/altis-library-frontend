@@ -2,54 +2,77 @@
   <section class="form-panel">
     <div class="form-content">
       <header class="form-header">
-        <h2>Cadastrar nova conta</h2>
+        <h2>{{ t('auth.register.title') }}</h2>
       </header>
 
       <q-form class="register-form" @submit.prevent="handleSubmit">
         <div class="form-field full-width">
-          <label for="name">Nome completo</label>
+          <label for="name">{{ t('auth.fields.fullName') }}</label>
           <q-input
             id="name"
             v-model="form.name"
-            placeholder="Seu nome"
+            :placeholder="t('auth.fields.namePlaceholder')"
             outlined
             dense
             autocomplete="name"
-            :rules="[value => !!value?.trim() || 'Informe seu nome']"
+            :rules="[value => !!value?.trim() || t('auth.validation.nameRequired')]"
           />
         </div>
 
         <div class="form-row">
           <div class="form-field">
-            <label for="birthDate">Data de nascimento</label>
+            <label for="birthDate">{{ t('auth.fields.birthDate') }}</label>
             <q-input
               id="birthDate"
-              v-model="form.birthDate"
-              type="date"
+              class="birth-date-input"
+              :model-value="formattedBirthDate"
+              readonly
               outlined
               dense
-              :max="maxBirthDate"
               :rules="[
-                value => !!value || 'Informe sua data de nascimento',
-                value => !value || value < maxBirthDate || 'Informe uma data anterior a hoje'
+                () => !!form.birthDate || t('auth.validation.birthDateRequired'),
+                () => !form.birthDate || form.birthDate < maxBirthDate || t('auth.validation.birthDatePast')
               ]"
-            />
+            >
+              <template #append>
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="event"
+                  :aria-label="t('auth.fields.birthDate')"
+                >
+                  <q-popup-proxy ref="birthDatePopup" cover transition-show="scale" transition-hide="scale">
+                    <q-date
+                      class="birth-date-calendar"
+                      v-model="form.birthDate"
+                      mask="YYYY-MM-DD"
+                      :locale="datePickerLocale"
+                      :default-year-month="defaultBirthDateMonth"
+                      :first-day-of-week="locale === 'en-US' ? 0 : 1"
+                      :options="isBirthDateSelectable"
+                      @update:model-value="closeBirthDatePicker"
+                    />
+                  </q-popup-proxy>
+                </q-btn>
+              </template>
+            </q-input>
           </div>
 
           <div class="form-field">
-            <label for="cpf">CPF</label>
+            <label for="cpf">{{ t('auth.fields.cpf') }}</label>
             <q-input
               id="cpf"
               v-model="form.cpf"
-              placeholder="000.000.000-00"
+              :placeholder="t('auth.fields.cpfPlaceholder')"
               outlined
               dense
               autocomplete="off"
               :rules="[
-                value => !!value?.trim() || 'Informe seu CPF',
+              value => !!value?.trim() || t('auth.validation.cpfRequired'),
                 value => {
                   const cpf = String(value ?? '').replace(/\D/g, '');
-                  return isValidCpf(cpf) || 'Digite um CPF válido';}
+                  return isValidCpf(cpf) || t('auth.validation.cpfInvalid');}
                   ]"
             />
           </div>
@@ -57,65 +80,65 @@
         </div>
 
         <div class="form-field full-width">
-          <label for="phone">Telefone</label>
+          <label for="phone">{{ t('auth.fields.phone') }}</label>
           <q-input
             id="phone"
             v-model="form.phone"
             type="tel"
-            placeholder="(85) 99999-9999"
+            :placeholder="t('auth.fields.phonePlaceholder')"
             outlined
             dense
             autocomplete="tel"
             :rules="[
-              value => !!value?.trim() || 'Informe seu telefone',
-              value => isValidPhone(String(value ?? '')) ||'Digite um telefone válido'
+              value => !!value?.trim() || t('auth.validation.phoneRequired'),
+              value => isValidPhone(String(value ?? '')) || t('auth.validation.phoneInvalid')
               ]"
 
           />
         </div>
 
         <div class="form-field full-width">
-          <label for="address">Endereço completo</label>
+          <label for="address">{{ t('auth.fields.address') }}</label>
           <q-input
             id="address"
             v-model="form.address"
-            placeholder="Rua das Flores, 123, Centro"
+            :placeholder="t('auth.fields.addressPlaceholder')"
             outlined
             dense
             autocomplete="street-address"
-            :rules="[value => !!value?.trim() || 'Informe seu endereço']"
+            :rules="[value => !!value?.trim() || t('auth.validation.addressRequired')]"
           />
         </div>
         <div class="form-field full-width">
-          <label for="email">E-mail</label>
+          <label for="email">{{ t('auth.fields.email') }}</label>
           <q-input
             id="email"
             v-model="form.email"
             type="email"
-            placeholder="seuemail@email.com"
+            :placeholder="t('auth.fields.emailPlaceholder')"
             outlined
             dense
             autocomplete="email"
             :rules="[
-              value => !!value?.trim() || 'Informe seu e-mail',
-              value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || 'Informe um e-mail válido'
+              value => !!value?.trim() || t('auth.validation.emailRequired'),
+              value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || t('auth.validation.emailInvalid')
             ]"
           />
         </div>
 
         <div class="form-field full-width">
-          <label for="password">Senha</label>
+          <label for="password">{{ t('auth.fields.password') }}</label>
           <q-input
             id="password"
             v-model="form.password"
             :type="showPassword ? 'text' : 'password'"
-            placeholder="Digite sua senha"
+            :placeholder="t('auth.fields.passwordPlaceholder')"
             outlined
             dense
             autocomplete="new-password"
             :rules="[
-              value => !!value || 'Informe sua senha',
-              value => value.length >= 15 || 'A senha deve ter no mínimo 15 caracteres'
+              value => !!value || t('auth.validation.passwordRequired'),
+              value => value.length >= 15 || t('auth.validation.passwordMin')
             ]"
           >
             <template #append>
@@ -129,18 +152,18 @@
         </div>
 
         <div class="form-field full-width">
-          <label for="confirmPassword">Confirmar senha</label>
+          <label for="confirmPassword">{{ t('auth.fields.confirmPassword') }}</label>
           <q-input
             id="confirmPassword"
             v-model="form.confirmPassword"
             :type="showConfirmPassword ? 'text' : 'password'"
-            placeholder="Confirme sua senha"
+            :placeholder="t('auth.fields.confirmPasswordPlaceholder')"
             outlined
             dense
             autocomplete="new-password"
             :rules="[
-              value => !!value || 'Confirme sua senha',
-              value => value === form.password || 'As senhas não coincidem'
+              value => !!value || t('auth.validation.confirmPasswordRequired'),
+              value => value === form.password || t('auth.validation.passwordMismatch')
             ]"
           >
             <template #append>
@@ -156,7 +179,7 @@
         <div class="form-actions">
           <q-btn
             class="register-button"
-            label="Cadastrar"
+            :label="t('auth.register.submit')"
             type="submit"
             unelevated
             no-caps
@@ -164,7 +187,7 @@
 
           <q-btn
             class="back-button"
-            label="Voltar ao Login"
+            :label="t('auth.actions.backToLogin')"
             to="/login"
             unelevated
             no-caps
@@ -177,11 +200,15 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 defineOptions({
   name: 'RegisterForm',
 });
+
+const { t, locale } = useI18n();
+const birthDatePopup = ref<{ hide: () => void } | null>(null);
 
 const emit = defineEmits<{
   submit: [form: {
@@ -210,6 +237,58 @@ const form = reactive({
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
 const maxBirthDate = new Date().toISOString().slice(0, 10);
+const defaultBirthDateMonth = maxBirthDate.slice(0, 7).replace('-', '/');
+const formattedBirthDate = computed(() => {
+  if (!form.birthDate) return '';
+
+  const [year = 0, month = 0, day = 0] = form.birthDate.split('-').map(Number);
+  if (!year || !month || !day) return '';
+
+  return new Intl.DateTimeFormat(locale.value, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+});
+const datePickerLocale = computed(() => {
+  const dateFormatter = (options: Intl.DateTimeFormatOptions, date: Date) =>
+    new Intl.DateTimeFormat(locale.value, { ...options, timeZone: 'UTC' }).format(date);
+
+  return {
+    firstDayOfWeek: locale.value === 'en-US' ? 0 : 1,
+    days: Array.from({ length: 7 }, (_, index) =>
+      dateFormatter({ weekday: 'long' }, new Date(Date.UTC(2024, 0, index + 7))),
+    ),
+    daysShort: Array.from({ length: 7 }, (_, index) =>
+      dateFormatter({ weekday: 'short' }, new Date(Date.UTC(2024, 0, index + 7))),
+    ),
+    months: Array.from({ length: 12 }, (_, month) =>
+      dateFormatter({ month: 'long' }, new Date(Date.UTC(2024, month, 1))),
+    ),
+    monthsShort: Array.from({ length: 12 }, (_, month) =>
+      dateFormatter({ month: 'short' }, new Date(Date.UTC(2024, month, 1))),
+    ),
+  };
+});
+
+function isBirthDateSelectable(date: string): boolean {
+  const [year = 0, month = 0, day = 0] = date.split(/[/-]/).map(Number);
+  const [maxYear = 0, maxMonth = 0, maxDay = 0] = maxBirthDate.split('-').map(Number);
+
+  return (
+    year > 0 &&
+    month > 0 &&
+    day > 0 &&
+    (year < maxYear ||
+      (year === maxYear && month < maxMonth) ||
+      (year === maxYear && month === maxMonth && day <= maxDay))
+  );
+}
+
+function closeBirthDatePicker() {
+  birthDatePopup.value?.hide();
+}
 
 const isValidCpf = (cpf: string): boolean => {
   const digits = cpf.replace(/\D/g, '');
@@ -320,6 +399,14 @@ function handleSubmit() {
   min-height: 30px;
   height: 30px;
   border-radius: 6px;
+}
+
+.form-field :deep(.birth-date-input.q-field--readonly.q-field--outlined .q-field__control:before) {
+  border-style: solid;
+}
+
+:global(.birth-date-calendar) {
+  color: #1b3a5c;
 }
 
 .form-field :deep(.q-field__native),

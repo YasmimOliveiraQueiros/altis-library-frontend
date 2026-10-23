@@ -9,6 +9,7 @@
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 import { Notify } from 'quasar';
+import { useI18n } from 'vue-i18n';
 import AuthBrandPanel from '@/components/Auth/AuthBrandPanel.vue';
 import RegisterForm from '@/components/Auth/RegisterForm.vue';
 import { useAuthStore } from '@/stores/Auth/AuthStore';
@@ -18,6 +19,7 @@ defineOptions({
 });
 
 const router = useRouter();
+const { t } = useI18n();
 const authStore = useAuthStore();
 
 interface RegisterFormData {
@@ -31,34 +33,13 @@ interface RegisterFormData {
   confirmPassword: string;
 }
 
-function getBackendMessage(error: unknown): string | undefined {
-  if (!axios.isAxiosError(error)) return undefined;
-
-  const data: unknown = error.response?.data;
-  if (typeof data === 'string' && data.trim()) return data;
-  if (data && typeof data === 'object') {
-    const body = data as Record<string, unknown>;
-    for (const key of ['message', 'detail', 'error']) {
-      const value = body[key];
-      if (typeof value === 'string' && value.trim())
-        return value;
-      }
-  }
-  return undefined;
-}
-
 function getErrorMessage(error: unknown): string {
-  const backendMessage = getBackendMessage(error);
-  if (backendMessage) return backendMessage;
-
   if (axios.isAxiosError(error)) {
-    if (!error.response) {
-      return 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.';
-    }
-    if (error.response.status === 409) return 'Este e-mail ou CPF já está cadastrado.';
-    if (error.response.status === 400) return 'Confira os dados informados e tente novamente.';
+    if (!error.response) return t('auth.errors.serviceUnavailable');
+    if (error.response.status === 409) return t('auth.errors.registrationConflict');
+    if (error.response.status === 400) return t('auth.errors.validation');
   }
-  return 'Não foi possível realizar o cadastro. Tente novamente.';
+  return t('auth.errors.registrationGeneric');
 }
 
 async function handleRegister(form: RegisterFormData) {
@@ -76,7 +57,7 @@ async function handleRegister(form: RegisterFormData) {
     await authStore.register(registerData);
     Notify.create({
       type: 'positive',
-      message: 'Cadastro realizado com sucesso!',
+      message: t('auth.success.registration'),
       position: 'top',
     });
     await router.push('/login');

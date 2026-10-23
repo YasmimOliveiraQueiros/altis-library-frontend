@@ -22,6 +22,7 @@
 import axios from 'axios';
 import { computed, ref } from 'vue';
 import { Notify } from 'quasar';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import AuthBrandPanel from '@/components/Auth/AuthBrandPanel.vue';
 import PasswordRecoveryAdmin from '@/components/Auth/PasswordRecoveryAdmin.vue';
@@ -38,66 +39,28 @@ defineOptions({
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const authStore = useAuthStore();
 const isAdmin = computed(() => route.query.tipo === 'admin');
 const step = ref<'identify' | 'reset'>('identify');
 const busy = ref<'verify' | 'reset' | null>(null);
 const isLoading = computed(() => busy.value !== null);
 
-function getBackendMessage(error: unknown): string | undefined {
-  if (!axios.isAxiosError(error)) return undefined;
-
-  const data: unknown = error.response?.data;
-  if (typeof data === 'string' && data.trim()) return data;
-  if (!data || typeof data !== 'object') return undefined;
-
-  const body = data as Record<string, unknown>;
-  for (const key of ['message', 'detail']) {
-    const value = body[key];
-    if (typeof value === 'string' && value.trim()) return value;
-  }
-
-  const errors = body.errors;
-  if (Array.isArray(errors)) {
-    const messages = errors.flatMap((entry: unknown) => {
-      if (typeof entry === 'string' && entry.trim()) return [entry];
-      if (entry && typeof entry === 'object') {
-        const message = (entry as Record<string, unknown>).defaultMessage;
-        if (typeof message === 'string' && message.trim()) return [message];
-      }
-      return [];
-    });
-    if (messages.length) return messages.join(' ');
-  }
-
-  const errorText = body.error;
-  if (
-    typeof errorText === 'string' &&
-    errorText.trim() &&
-    !['bad request', 'not found', 'conflict', 'internal server error'].includes(
-      errorText.trim().toLowerCase(),
-    )
-  ) {
-    return errorText;
-  }
-
-  return undefined;
-}
-
 function getOperationErrorMessage(
   error: unknown,
   operation: 'verify' | 'reset',
 ): string {
-  const backendMessage = getBackendMessage(error);
-  if (backendMessage) return backendMessage;
-
   if (axios.isAxiosError(error) && !error.response) {
-    return 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.';
+    return t('auth.errors.serviceUnavailable');
+  }
+
+  if (axios.isAxiosError(error) && error.response?.status === 400) {
+    return t('auth.errors.validation');
   }
 
   return operation === 'verify'
-    ? 'Não foi possível validar os dados informados. Confira o e-mail e o CPF e tente novamente.'
-    : 'Não foi possível redefinir a senha. Confira os dados e tente novamente.';
+    ? t('auth.errors.identityVerification')
+    : t('auth.errors.passwordReset');
 }
 
 async function handleVerification(data: PasswordRecoveryVerification) {
@@ -137,7 +100,7 @@ async function handlePasswordReset(data: PasswordRecoveryReset) {
 
   Notify.create({
     type: 'positive',
-    message: 'Senha redefinida com sucesso!',
+    message: t('auth.success.passwordReset'),
     position: 'top',
   });
   await router.push('/login');

@@ -3,8 +3,8 @@
   <section class="form-panel">
     <div class="form-content">
       <header class="form-header">
-        <h2>Bem-vindo de volta!</h2>
-        <p>Faça login para acessar o sistema</p>
+        <h2>{{ t('auth.login.title') }}</h2>
+        <p>{{ t('auth.login.subtitle') }}</p>
       </header>
 
       <div class="user-icon">
@@ -13,39 +13,39 @@
 
       <q-form class="login-form" @submit.prevent="handleSubmit">
         <div class="form-field">
-          <label for="email">E-mail</label>
+          <label for="email">{{ t('auth.fields.email') }}</label>
 
           <q-input
             id="email"
             v-model="email"
             type="email"
-            placeholder="seuemail@email.com"
+            :placeholder="t('auth.fields.emailPlaceholder')"
             outlined
             dense
             autocomplete="email"
             lazy-rules
             :rules="[
-              (value) => !!value || 'Informe seu e-mail',
+              (value) => !!value || t('auth.validation.emailRequired'),
               (value) =>
                 /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ||
-                'Informe um e-mail válido',
+                t('auth.validation.emailInvalid'),
             ]"
           />
         </div>
 
         <div class="form-field">
-          <label for="password">Senha</label>
+          <label for="password">{{ t('auth.fields.password') }}</label>
 
           <q-input
             id="password"
             v-model="password"
             :type="showPassword ? 'text' : 'password'"
-            placeholder="Digite sua senha"
+            :placeholder="t('auth.fields.passwordPlaceholder')"
             outlined
             dense
             autocomplete="current-password"
             lazy-rules
-            :rules="[(value) => !!value || 'Informe sua senha']">
+            :rules="[(value) => !!value || t('auth.validation.passwordRequired')]">
             
             <template #append>
               <q-icon
@@ -59,7 +59,7 @@
 
         <q-btn
           class="login-button"
-          label="Entrar"
+          :label="t('auth.login.submit')"
           type="submit"
           unelevated
           no-caps
@@ -75,11 +75,11 @@
 
       <footer class="form-footer">
         <router-link to="/recuperar-senha">
-          Recuperar senha?
+          {{ t('auth.login.recoverPassword') }}
         </router-link>
 
         <router-link to="/cadastro">
-          Realizar cadastro?
+          {{ t('auth.login.register') }}
         </router-link>
       </footer>
     </div>
@@ -88,7 +88,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
+
+const { t } = useI18n();
 
 defineProps<{
   loading?: boolean;

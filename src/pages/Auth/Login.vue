@@ -17,6 +17,8 @@ defineOptions({
 });
 
 import { ref } from 'vue';
+import axios from 'axios';
+import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 
 import AuthBrandPanel from '@/components/Auth/AuthBrandPanel.vue';
@@ -26,6 +28,7 @@ import { useAuthStore } from '@/stores/Auth/AuthStore';
 import type { LoginCredentials } from '@/services/AuthService';
 
 const router = useRouter();
+const { t } = useI18n();
 const authStore = useAuthStore();
 
 const loading = ref(false);
@@ -39,8 +42,12 @@ async function handleLogin(credentials: LoginCredentials) {
     await authStore.login(credentials);
 
     await router.push(authStore.isAdmin ? '/dashboard' : '/meu-dashboard');
-  } catch {
-    errorMessage.value = 'E-mail ou senha inválidos. Tente novamente.';
+  } catch (error: unknown) {
+    errorMessage.value = axios.isAxiosError(error) && !error.response
+      ? t('auth.errors.serviceUnavailable')
+      : axios.isAxiosError(error) && [401, 403].includes(error.response?.status ?? 0)
+        ? t('auth.errors.invalidCredentials')
+        : t('auth.errors.generic');
   } finally {
     loading.value = false;
   }

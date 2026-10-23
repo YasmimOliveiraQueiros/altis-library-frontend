@@ -1,26 +1,26 @@
 ﻿<template>
   <section class="recovery-view recovery-admin-content">
     <header class="recovery-header">
-      <h2>Recuperar senha</h2>
+      <h2>{{ t('auth.recovery.title') }}</h2>
     </header>
 
     <p class="recovery-admin-message">
-      A Altis+ Biblioteca percebeu que você deseja<br />
-      alterar sua senha.
+      {{ t('auth.recovery.adminMessageFirst') }}<br />
+      {{ t('auth.recovery.adminMessageSecond') }}
     </p>
 
     <p class="recovery-admin-guidance">
-      Entre em contato com o suporte pelos meios de comunicação abaixo!
+      {{ t('auth.recovery.adminGuidance') }}
     </p>
 
     <p class="recovery-admin-thanks">
-      Altis+ Biblioteca agradece seu contato.
+      {{ t('auth.recovery.adminThanks') }}
     </p>
 
     <div class="recovery-actions">
       <q-btn
         class="recovery-button"
-        label="Voltar ao Login"
+        :label="t('auth.actions.backToLogin')"
         to="/login"
         unelevated
         no-caps
@@ -29,13 +29,17 @@
 
     <footer class="recovery-admin-contact">
       <a href="tel:+5585999999999">(85) 99999-9999</a>
-      ou
+      {{ t('auth.recovery.or') }}
       <a href="mailto:altislab@gmail.com">altislab@gmail.com</a>
     </footer>
   </section>
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+
 defineOptions({
   name: 'PasswordRecoveryAdmin',
 });
