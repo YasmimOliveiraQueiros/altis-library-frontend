@@ -21,14 +21,14 @@
         <q-btn
           flat
           color="primary"
-          label="Cancelar"
+          :label="props.cancelLabel"
           :disable="loading"
           @click="emit('cancel')"
         />
         <q-btn
           unelevated
           color="negative"
-          label="Excluir"
+          :label="props.confirmLabel"
           :loading="loading"
           :disable="loading"
           @click="emit('confirm')"
@@ -39,14 +39,19 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: boolean;
   title: string;
   message: string;
   recordName: string;
+  cancelLabel?: string;
+  confirmLabel?: string;
   errorMessage?: string;
   loading?: boolean;
-}>();
+}>(), {
+  cancelLabel: 'Cancelar',
+  confirmLabel: 'Excluir',
+});
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
