@@ -6,7 +6,7 @@
         <q-card flat bordered class="summary-card">
           <div class="summary-label">
             <span class="status-dot editoras"></span>
-            Editoras
+            {{ t('publishers.stats.publishers') }}
           </div>
 
           <div class="summary-value">
@@ -18,11 +18,11 @@
           flat
           bordered
           class="summary-card"
-          title="Soma dos livros vinculados às editoras desta página carregada"
+          :title="t('publishers.stats.linkedBooksTitle')"
         >
           <div class="summary-label">
             <span class="status-dot livros"></span>
-            Livros vinculados
+            {{ t('publishers.stats.linkedBooks') }}
           </div>
 
           <div class="summary-value">
@@ -32,7 +32,7 @@
       </div>
 
       <q-btn
-        label="+ Nova editora"
+        :label="t('publishers.actions.new')"
         class="new-publisher-btn"
         unelevated
         @click="openCreatePublisher"
@@ -45,7 +45,7 @@
         v-model="search"
         outlined
         dense
-        placeholder="Buscar por nome ou e-mail"
+        :placeholder="t('publishers.searchPlaceholder')"
         class="search-input"
         @keydown.enter.prevent="searchPublishers"
       />
@@ -65,7 +65,7 @@
         :loading="loading"
         hide-pagination
         :rows-per-page-options="[0]"
-        no-data-label="Dados serão carregados pelo backend."
+        :no-data-label="t('publishers.empty')"
         class="publisher-table"
       >
         <template #body-cell-actions="props">
@@ -75,7 +75,7 @@
               round
               dense
               icon="edit"
-              aria-label="Editar editora"
+              :aria-label="t('publishers.actions.edit')"
               :disable="savingPublisher"
               @click="openEditPublisher(props.row)"
             />
@@ -85,7 +85,7 @@
               dense
               icon="delete"
               color="negative"
-              aria-label="Excluir editora"
+              :aria-label="t('publishers.actions.delete')"
               :disable="savingPublisher || deletingPublisherId !== null"
               @click="openDeleteConfirmation(props.row)"
             />
@@ -106,8 +106,10 @@
 
     <ConfirmDeleteDialog
       v-model="showDeleteConfirmation"
-      title="Excluir editora"
-      message="Tem certeza que deseja excluir a editora"
+      :title="t('publishers.delete.title')"
+      :message="t('publishers.delete.message')"
+      :cancel-label="t('publishers.actions.cancel')"
+      :confirm-label="t('publishers.actions.delete')"
       :record-name="pendingDeletePublisher?.name ?? ''"
       :error-message="deleteErrorMessage"
       :loading="deletingPublisherId !== null"
@@ -119,6 +121,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import axios from 'axios';
+import { useI18n } from 'vue-i18n';
 import { PublisherService } from '@/services/PublisherService';
 import type { PublisherPayload, PublisherResponse, PublisherStatus } from '@/types/Publisher';
 import PublisherFormDialog from '@/components/publishers/PublisherFormDialog.vue';
@@ -132,10 +136,10 @@ interface PublisherFormSubmission {
   cnpj: string;
   city: string;
   copies: number | null;
-  status: 'Ativa' | 'Inativa';
 }
 
 const $q = useQuasar();
+const { t } = useI18n();
 const search = ref('');
 const showPublisherForm = ref(false);
 const formMode = ref<'create' | 'edit'>('create');
@@ -146,7 +150,6 @@ const initialFormData = ref<PublisherFormSubmission>({
   cnpj: '',
   city: '',
   copies: 0,
-  status: 'Ativa',
 });
 const publisherRows = ref<PublisherResponse[]>([]);
 const totalPublishers = ref(0);
@@ -164,8 +167,8 @@ const booksLinkedOnLoadedPage = computed(() =>
 );
 
 function formatPublisherStatus(value: PublisherStatus): string {
-  if (value === 'ACTIVE') return 'Ativa';
-  if (value === 'INACTIVE') return 'Inativa';
+  if (value === 'ACTIVE') return t('publishers.status.active');
+  if (value === 'INACTIVE') return t('publishers.status.inactive');
 
   return value;
 }
@@ -183,8 +186,16 @@ async function loadPublishers(searchTerm = '') {
 
     publisherRows.value = publishers;
     totalPublishers.value = response.totalElements;
-  } catch {
-    errorMessage.value = 'Não foi possível carregar as editoras. Tente novamente.';
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error) && !error.response) {
+      errorMessage.value = t('publishers.errors.serviceUnavailable');
+    } else if (axios.isAxiosError(error) && error.response?.status === 401) {
+      errorMessage.value = t('publishers.errors.unauthorized');
+    } else if (axios.isAxiosError(error) && error.response?.status === 403) {
+      errorMessage.value = t('publishers.errors.forbidden');
+    } else {
+      errorMessage.value = t('publishers.errors.load');
+    }
   } finally {
     loading.value = false;
   }
@@ -205,7 +216,6 @@ function openCreatePublisher() {
     cnpj: '',
     city: '',
     copies: 0,
-    status: 'Ativa',
   };
   publisherFormError.value = '';
   showPublisherForm.value = true;
@@ -220,7 +230,6 @@ function openEditPublisher(publisher: PublisherResponse) {
     cnpj: publisher.cnpj,
     city: `${publisher.city} - ${publisher.state}`,
     copies: publisher.bookCount,
-    status: publisher.status === 'ACTIVE' ? 'Ativa' : 'Inativa',
   };
   publisherFormError.value = '';
   showPublisherForm.value = true;
@@ -232,20 +241,20 @@ async function handlePublisherFormSave(formData: PublisherFormSubmission) {
   const isEditing = formMode.value === 'edit';
   const publisherId = selectedPublisherId.value;
   if (isEditing && publisherId === null) {
-    publisherFormError.value = 'Não foi possível identificar a editora para atualização.';
+    publisherFormError.value = t('publishers.errors.updateIdMissing');
     return;
   }
 
   const cityState = formData.city.trim().match(/^(.+?)\s*-\s*([A-Za-z]{2})$/);
   if (!cityState) {
-    publisherFormError.value = 'Informe a cidade e a UF no formato Cidade - UF.';
+    publisherFormError.value = t('publishers.validation.cityStateFormat');
     return;
   }
 
   const city = cityState[1]?.trim();
   const state = cityState[2]?.toUpperCase();
   if (!city || !state) {
-    publisherFormError.value = 'Informe a cidade e a UF no formato Cidade - UF.';
+    publisherFormError.value = t('publishers.validation.cityStateFormat');
     return;
   }
 
@@ -270,15 +279,25 @@ async function handlePublisherFormSave(formData: PublisherFormSubmission) {
     showPublisherForm.value = false;
     $q.notify({
       type: 'positive',
-      message: isEditing ? 'Editora atualizada com sucesso.' : 'Editora cadastrada com sucesso.',
+      message: isEditing ? t('publishers.success.updated') : t('publishers.success.created'),
       position: 'top-right',
       timeout: 3000,
     });
     await loadPublishers(search.value);
-  } catch {
-    publisherFormError.value = isEditing
-      ? 'Não foi possível atualizar a editora. Verifique os dados e tente novamente.'
-      : 'Não foi possível cadastrar a editora. Verifique os dados e tente novamente.';
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error) && !error.response) {
+      publisherFormError.value = t('publishers.errors.serviceUnavailable');
+    } else if (axios.isAxiosError(error) && error.response?.status === 400) {
+      publisherFormError.value = t('publishers.errors.validation');
+    } else if (axios.isAxiosError(error) && error.response?.status === 401) {
+      publisherFormError.value = t('publishers.errors.unauthorized');
+    } else if (axios.isAxiosError(error) && error.response?.status === 403) {
+      publisherFormError.value = t('publishers.errors.forbidden');
+    } else {
+      publisherFormError.value = isEditing
+        ? t('publishers.errors.update')
+        : t('publishers.errors.create');
+    }
   } finally {
     savingPublisher.value = false;
   }
@@ -296,8 +315,8 @@ function openDeleteConfirmation(publisher: PublisherResponse) {
     $q.notify({
       type: 'negative',
       message: hasKnownLinkedBooks
-        ? `Esta editora não pode ser excluída porque possui ${publisher.bookCount} livro(s) vinculado(s).`
-        : 'Não foi possível confirmar se esta editora possui livros vinculados. A exclusão foi bloqueada.',
+        ? t('publishers.errors.hasLinkedBooks', { count: publisher.bookCount })
+        : t('publishers.errors.linkedBooksUnknown'),
       position: 'top-right',
       timeout: 4000,
     });
@@ -318,28 +337,14 @@ function cancelDeleteConfirmation() {
 }
 
 function getDeleteErrorMessage(error: unknown): string {
-  let backendMessage = '';
-
-  if (error && typeof error === 'object' && 'response' in error) {
-    const response = error.response;
-    if (response && typeof response === 'object' && 'data' in response) {
-      const data = response.data;
-      if (typeof data === 'string') {
-        backendMessage = data;
-      } else if (data && typeof data === 'object') {
-        const details = data as Record<string, unknown>;
-        backendMessage = [details.message, details.detail, details.error]
-          .filter((value): value is string => typeof value === 'string')
-          .join(' ');
-      }
-    }
-  }
-
-  if (/livros?|books?|vinculad|associad|empr[eé]stim/i.test(backendMessage)) {
-    return 'Não foi possível excluir esta editora porque há livros vinculados. Remova ou reassocie esses livros e tente novamente.';
-  }
-
-  return 'Não foi possível excluir a editora. Verifique os dados e tente novamente.';
+  const fallback = t('publishers.errors.delete');
+  if (!axios.isAxiosError(error)) return fallback;
+  if (!error.response) return t('publishers.errors.serviceUnavailable');
+  if (error.response.status === 401) return t('publishers.errors.unauthorized');
+  if (error.response.status === 403) return t('publishers.errors.forbidden');
+  if (error.response.status === 404) return fallback;
+  if (error.response.status === 409) return fallback;
+  return fallback;
 }
 
 async function confirmDeletePublisher() {
@@ -355,7 +360,7 @@ async function confirmDeletePublisher() {
     pendingDeletePublisher.value = null;
     $q.notify({
       type: 'positive',
-      message: 'Editora excluída com sucesso.',
+      message: t('publishers.success.deleted'),
       position: 'top-right',
       timeout: 3000,
     });
@@ -367,39 +372,39 @@ async function confirmDeletePublisher() {
   }
 }
 
-const columns: QTableColumn[] = [
+const columns = computed<QTableColumn[]>(() => [
   {
     name: 'name',
-    label: 'Nome',
+    label: t('publishers.table.name'),
     field: 'name',
     align: 'left' as const,
   },
   {
     name: 'email',
-    label: 'E-mail',
+    label: t('publishers.table.email'),
     field: 'email',
     align: 'left' as const,
   },
   {
     name: 'books',
-    label: 'Livros cadastrados',
+    label: t('publishers.table.books'),
     field: 'bookCount',
     align: 'center' as const,
   },
   {
     name: 'status',
-    label: 'Status',
+    label: t('publishers.table.status'),
     field: 'status',
     align: 'center' as const,
     format: formatPublisherStatus,
   },
   {
     name: 'actions',
-    label: 'Ação',
+    label: t('publishers.table.actions'),
     field: 'actions',
     align: 'center' as const,
   },
-];
+]);
 </script>
 
 <style scoped>

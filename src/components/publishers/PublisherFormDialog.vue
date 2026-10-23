@@ -3,7 +3,7 @@
     <q-card class="publisher-form">
       <q-card-section class="form-header q-pt-lg q-px-lg q-pb-sm">
         <div class="text-h6">
-          {{ mode === 'edit' ? 'Editar editora' : 'Nova Editora' }}
+          {{ mode === 'edit' ? t('publishers.form.editTitle') : t('publishers.form.newTitle') }}
         </div>
 
         <q-btn flat round dense icon="close" :disable="loading" @click="closeDialog" />
@@ -14,68 +14,57 @@
           <div class="publisher-fields">
             <q-input
               v-model="form.name"
-              label="Nome da editora"
-              placeholder="Nome da editora"
+              :label="t('publishers.form.name')"
+              :placeholder="t('publishers.form.namePlaceholder')"
               outlined
               hide-bottom-space
-              :rules="[(value) => !!String(value ?? '').trim() || 'Informe o nome da editora']"
+              :rules="[(value) => !!String(value ?? '').trim() || t('publishers.validation.nameRequired')]"
             />
 
             <q-input
               v-model="form.email"
-              label="E-mail"
-              placeholder="E-mail"
+              :label="t('publishers.form.email')"
+              :placeholder="t('publishers.form.emailPlaceholder')"
               outlined
               hide-bottom-space
               :rules="[
-                (value) => !!String(value ?? '').trim() || 'Informe o e-mail',
+                (value) => !!String(value ?? '').trim() || t('publishers.validation.emailRequired'),
                 (value) =>
                   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value ?? '')) ||
-                  'Informe um e-mail válido',
+                  t('publishers.validation.emailInvalid'),
               ]"
             />
 
             <q-input
               v-model="form.cnpj"
-              label="CNPJ"
-              placeholder="00.000.000/0000-00"
+              :label="t('publishers.form.cnpj')"
+              :placeholder="t('publishers.form.cnpjPlaceholder')"
               outlined
               hide-bottom-space
-              :rules="[(value) => !!String(value ?? '').trim() || 'Informe o CNPJ']"
+              :rules="[(value) => !!String(value ?? '').trim() || t('publishers.validation.cnpjRequired')]"
             />
 
             <q-input
               v-model="form.city"
-              label="Cidade"
-              placeholder="Cidade - UF"
+              :label="t('publishers.form.cityState')"
+              :placeholder="t('publishers.form.cityStatePlaceholder')"
               outlined
               hide-bottom-space
               :rules="[
-                (value) => !!String(value ?? '').trim() || 'Informe a cidade e a UF',
+                (value) => !!String(value ?? '').trim() || t('publishers.validation.cityStateRequired'),
                 (value) =>
                   /^.+\s*-\s*[A-Za-z]{2}$/.test(String(value ?? '').trim()) ||
-                  'Informe no formato Cidade - UF',
+                  t('publishers.validation.cityStateFormat'),
               ]"
             />
 
             <q-input
               v-model="form.copies"
-              label="Livros cadastrados"
+              :label="t('publishers.form.books')"
               type="number"
               outlined
               hide-bottom-space
               readonly
-            />
-
-            <q-select
-              v-model="form.status"
-              label="Status"
-              :options="publisherStatusOptions"
-              outlined
-              hide-bottom-space
-              class="filter-select"
-              popup-content-class="filter-select-menu"
-              :disable="loading || mode === 'edit'"
             />
           </div>
 
@@ -85,14 +74,14 @@
 
           <div class="form-actions">
             <q-btn
-              label="Cancelar"
+              :label="t('publishers.actions.cancel')"
               flat
               class="cancel-btn"
               :disable="loading"
               @click="cancelDialog"
             />
 
-            <q-btn label="Salvar" type="submit" :loading="loading" :disable="loading" />
+            <q-btn :label="t('publishers.actions.save')" type="submit" :loading="loading" :disable="loading" />
           </div>
         </q-form>
       </q-card-section>
@@ -102,6 +91,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 interface PublisherFormData {
   name: string;
@@ -109,7 +99,6 @@ interface PublisherFormData {
   cnpj: string;
   city: string;
   copies: number | null;
-  status: 'Ativa' | 'Inativa';
 }
 
 const props = withDefaults(
@@ -130,10 +119,11 @@ const props = withDefaults(
       cnpj: '',
       city: '',
       copies: 0,
-      status: 'Ativa',
     }),
   },
 );
+
+const { t } = useI18n();
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
@@ -147,7 +137,6 @@ const dialog = computed({
 });
 
 const form = reactive<PublisherFormData>({ ...props.initialData });
-const publisherStatusOptions = ['Ativa', 'Inativa'];
 
 watch(
   () => props.modelValue,
