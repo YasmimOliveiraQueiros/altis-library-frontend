@@ -2,7 +2,7 @@
   <q-dialog v-model="dialog" :persistent="loading">
     <q-card class="loan-form">
       <q-card-section class="form-header q-pt-lg q-px-lg q-pb-sm">
-        <div class="text-h6">{{ mode === 'edit' ? 'Editar aluguel' : 'Novo aluguel' }}</div>
+        <div class="text-h6">{{ mode === 'edit' ? t('loans.form.editTitle') : t('loans.form.newTitle') }}</div>
         <q-btn flat round dense icon="close" :disable="loading" @click="cancelDialog" />
       </q-card-section>
 
@@ -11,7 +11,7 @@
           <div class="loan-fields">
             <q-select
               v-model="form.userId"
-              label="Locatário"
+              :label="t('loans.form.borrower')"
               :options="users"
               option-label="name"
               option-value="id"
@@ -24,17 +24,17 @@
               :loading="referencesLoading"
               :disable="loading || referencesLoading || !referencesLoaded || mode === 'edit'"
               :rules="[
-                (value) => props.users.some((user) => user.id === value) || 'Selecione um locatário válido',
+                (value) => props.users.some((user) => user.id === value) || t('loans.validation.borrowerRequired'),
               ]"
             >
               <template #no-option>
-                <q-item><q-item-section class="text-grey">Nenhum usuário disponível</q-item-section></q-item>
+                  <q-item><q-item-section class="text-grey">{{ t('loans.form.noUsers') }}</q-item-section></q-item>
               </template>
             </q-select>
 
             <q-select
               v-model="form.bookId"
-              label="Livro"
+              :label="t('loans.form.book')"
               :options="books"
               option-label="title"
               option-value="id"
@@ -47,43 +47,45 @@
               :loading="referencesLoading"
               :disable="loading || referencesLoading || !referencesLoaded || mode === 'edit'"
               :rules="[
-                (value) => props.books.some((book) => book.id === value) || 'Selecione um livro válido',
+                (value) => props.books.some((book) => book.id === value) || t('loans.validation.bookRequired'),
               ]"
             >
               <template #no-option>
-                <q-item><q-item-section class="text-grey">Nenhum livro disponível</q-item-section></q-item>
+                  <q-item><q-item-section class="text-grey">{{ t('loans.form.noBooks') }}</q-item-section></q-item>
               </template>
             </q-select>
 
             <div class="date-fields">
               <q-input
                 v-model="form.loanDate"
-                label="Data do aluguel"
+                :label="t('loans.form.loanDate')"
+                :lang="locale"
                 outlined
                 type="date"
                 hide-bottom-space
                 :disable="loading"
-                :rules="[(value) => !!value || 'Informe a data do aluguel']"
+                :rules="[(value) => !!value || t('loans.validation.loanDateRequired')]"
               />
               <q-input
                 v-model="form.returnDate"
-                label="Data prevista de devolução"
+                :label="t('loans.form.returnDate')"
+                :lang="locale"
                 outlined
                 type="date"
                 hide-bottom-space
                 :disable="loading"
                 :rules="[
-                  (value) => !!value || 'Informe a data prevista de devolução',
+                  (value) => !!value || t('loans.validation.returnDateRequired'),
                   (value) =>
                     !form.loanDate || !value || value >= form.loanDate ||
-                    'A devolução não pode ser anterior ao empréstimo',
+                    t('loans.validation.returnDateAfterLoan'),
                 ]"
               />
             </div>
 
             <q-input
               v-model="form.observations"
-              label="Observações (opcional)"
+              :label="t('loans.form.observations')"
               outlined
               type="textarea"
               :disable="loading"
@@ -98,9 +100,9 @@
           </div>
 
           <div class="form-actions">
-            <q-btn label="Cancelar" flat class="cancel-btn" :disable="loading" @click="cancelDialog" />
+            <q-btn :label="t('loans.actions.cancel')" flat class="cancel-btn" :disable="loading" @click="cancelDialog" />
             <q-btn
-              label="Salvar"
+              :label="t('loans.actions.save')"
               type="submit"
               :loading="loading"
               :disable="loading || !referencesLoaded"
@@ -114,6 +116,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { LoanRequest, LoanResponse } from '@/types/Loan';
 import type { BookResponse } from '@/types/Book';
 import type { UserResponse } from '@/types/User';
@@ -156,6 +159,8 @@ const emit = defineEmits<{
   save: [payload: LoanRequest];
   cancel: [];
 }>();
+
+const { t, locale } = useI18n();
 
 const dialog = computed({
   get: () => props.modelValue,

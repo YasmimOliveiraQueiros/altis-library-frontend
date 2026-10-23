@@ -9,7 +9,7 @@
       </div>
 
       <q-btn
-        label="+ Novo aluguel"
+        :label="t('loans.actions.new')"
         class="new-loan-btn"
         unelevated
         :disable="savingLoan"
@@ -26,7 +26,7 @@
         v-model="search"
         outlined
         dense
-        placeholder="Buscar por locatário ou livro"
+        :placeholder="t('loans.searchPlaceholder')"
         class="search-input"
         @keyup.enter="searchLoans"
       />
@@ -47,14 +47,14 @@
     <q-banner v-if="loansError" dense class="state-banner error-banner" role="alert">
       {{ loansError }}
       <template #action>
-        <q-btn flat label="Tentar novamente" :loading="loansLoading" @click="loadLoans" />
+        <q-btn flat :label="t('loans.actions.retry')" :loading="loansLoading" @click="loadLoans" />
       </template>
     </q-banner>
 
     <q-banner v-if="referencesError" dense class="state-banner reference-banner" role="alert">
-      {{ referencesError }} Os IDs serão exibidos até que os dados possam ser carregados.
+      {{ referencesError }} {{ t('loans.errors.referencesFallback') }}
       <template #action>
-        <q-btn flat label="Tentar novamente" :loading="referencesLoading" @click="loadReferences" />
+        <q-btn flat :label="t('loans.actions.retry')" :loading="referencesLoading" @click="loadReferences" />
       </template>
     </q-banner>
 
@@ -83,7 +83,7 @@
               round
               dense
               dropdown-icon="more_vert"
-              aria-label="Ações do aluguel"
+              :aria-label="t('loans.actions.rowActions')"
               :disable="savingLoan || returningLoanId !== null"
             >
               <q-list>
@@ -94,7 +94,7 @@
                   @click="openEditLoan(props.row)"
                 >
                   <q-item-section avatar><q-icon name="edit" /></q-item-section>
-                  <q-item-section>Editar</q-item-section>
+                  <q-item-section>{{ t('loans.actions.edit') }}</q-item-section>
                 </q-item>
                 <q-item
                   class="loan-action-item"
@@ -104,7 +104,7 @@
                   @click="openReturnConfirmation(props.row)"
                 >
                   <q-item-section avatar><q-icon name="assignment_return" /></q-item-section>
-                  <q-item-section>Registrar devolução</q-item-section>
+                  <q-item-section>{{ t('loans.actions.registerReturn') }}</q-item-section>
                 </q-item>
               </q-list>
             </q-btn-dropdown>
@@ -120,7 +120,7 @@
 
       <div class="pagination-controls">
         <div class="page-size-control">
-          <span>Linhas por página</span>
+          <span>{{ t('loans.pagination.rowsPerPage') }}</span>
           <q-select
             v-model="pageSize"
             dense
@@ -128,7 +128,7 @@
             :options="pageSizeOptions"
             class="page-size-select"
             popup-content-class="filter-select-menu"
-            aria-label="Linhas por página"
+            :aria-label="t('loans.pagination.rowsPerPage')"
             @update:model-value="changePageSize"
           />
         </div>
@@ -140,7 +140,7 @@
             round
             dense
             icon="chevron_left"
-            aria-label="Página anterior"
+            :aria-label="t('loans.pagination.previous')"
             :disable="loansLoading || page === 0 || totalPages === 0"
             @click="goToPreviousPage"
           />
@@ -149,7 +149,7 @@
             round
             dense
             icon="chevron_right"
-            aria-label="Próxima página"
+            :aria-label="t('loans.pagination.next')"
             :disable="loansLoading || page + 1 >= totalPages"
             @click="goToNextPage"
           />
@@ -174,9 +174,9 @@
 
     <q-dialog v-model="showReturnConfirmation" :persistent="returningLoanId !== null">
       <q-card class="loan-confirmation">
-        <q-card-section class="text-h6">Registrar devolução</q-card-section>
+        <q-card-section class="text-h6">{{ t('loans.return.title') }}</q-card-section>
         <q-card-section>
-          Confirma a devolução do empréstimo #{{ pendingReturnLoan?.id }}?
+          {{ t('loans.return.confirmation', { id: pendingReturnLoan?.id ?? '' }) }}
           <div v-if="returnErrorMessage" class="operation-error" role="alert">
             {{ returnErrorMessage }}
           </div>
@@ -184,14 +184,14 @@
         <q-card-actions align="right">
           <q-btn
             flat
-            label="Cancelar"
+            :label="t('loans.actions.cancel')"
             color="primary"
             :disable="returningLoanId !== null"
             @click="cancelReturnConfirmation"
           />
           <q-btn
             unelevated
-            label="Confirmar devolução"
+            :label="t('loans.return.confirm')"
             color="primary"
             :loading="returningLoanId !== null"
             @click="confirmReturnLoan"
@@ -204,6 +204,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import axios from 'axios';
+import { useI18n } from 'vue-i18n';
 import type { QTableColumn } from 'quasar';
 import { useQuasar } from 'quasar';
 import { BookService } from '@/services/BookService';
@@ -224,6 +226,7 @@ interface LoanTableRow extends LoanResponse {
 }
 
 const $q = useQuasar();
+const { t, locale } = useI18n();
 const dashboard = ref<DashboardResponse | null>(null);
 const dashboardLoading = ref(false);
 const dashboardError = ref('');
@@ -231,11 +234,11 @@ let dashboardAccessDenied = false;
 let dashboardRefreshPending = false;
 
 const summaryCards = computed(() => [
-  { label: 'Pendentes', value: dashboard.value?.pendingLoans, indicatorClass: 'pending' },
-  { label: 'Atrasados', value: dashboard.value?.overdueLoans, indicatorClass: 'overdue' },
-  { label: 'Devolvidos', value: dashboard.value?.returnedLoans, indicatorClass: 'returned' },
+  { label: t('loans.stats.pending'), value: dashboard.value?.pendingLoans, indicatorClass: 'pending' },
+  { label: t('loans.stats.overdue'), value: dashboard.value?.overdueLoans, indicatorClass: 'overdue' },
+  { label: t('loans.stats.returned'), value: dashboard.value?.returnedLoans, indicatorClass: 'returned' },
   {
-    label: 'Total',
+    label: t('loans.stats.total'),
     value: dashboard.value
       ? dashboard.value.pendingLoans + dashboard.value.overdueLoans + dashboard.value.returnedLoans
       : undefined,
@@ -243,13 +246,13 @@ const summaryCards = computed(() => [
   },
 ]);
 
-const statusOptions: { label: string; value: LoanStatus | null }[] = [
-  { label: 'Todos os status', value: null },
-  { label: 'Pendente', value: 'PENDING' },
-  { label: 'Atrasado', value: 'OVERDUE' },
-  { label: 'Devolvido', value: 'RETURNED' },
-  { label: 'Devolvido C/A', value: 'RETURNED_LATE' },
-];
+const statusOptions = computed<{ label: string; value: LoanStatus | null }[]>(() => [
+  { label: t('loans.status.all'), value: null },
+  { label: t('loans.status.pending'), value: 'PENDING' },
+  { label: t('loans.status.overdue'), value: 'OVERDUE' },
+  { label: t('loans.status.returned'), value: 'RETURNED' },
+  { label: t('loans.status.returnedLate'), value: 'RETURNED_LATE' },
+]);
 
 const pageSizeOptions = [10, 25, 50];
 const search = ref('');
@@ -280,20 +283,20 @@ const returningLoanId = ref<number | null>(null);
 const returnErrorMessage = ref('');
 let loansRequestId = 0;
 
-const columns: QTableColumn<LoanTableRow>[] = [
-  { name: 'user', label: 'Locatário', field: 'userName', align: 'left' },
-  { name: 'book', label: 'Livro', field: 'bookTitle', align: 'left' },
-  { name: 'loanDate', label: 'Aluguel', field: 'loanDateLabel', align: 'left' },
-  { name: 'returnDate', label: 'Devolução', field: 'returnDateLabel', align: 'left' },
-  { name: 'status', label: 'Status', field: 'status', align: 'center' },
-  { name: 'actions', label: 'Ação', field: 'id', align: 'center' },
-];
+const columns = computed<QTableColumn<LoanTableRow>[]>(() => [
+  { name: 'user', label: t('loans.table.borrower'), field: 'userName', align: 'left' },
+  { name: 'book', label: t('loans.table.book'), field: 'bookTitle', align: 'left' },
+  { name: 'loanDate', label: t('loans.table.loanDate'), field: 'loanDateLabel', align: 'left' },
+  { name: 'returnDate', label: t('loans.table.returnDate'), field: 'returnDateLabel', align: 'left' },
+  { name: 'status', label: t('loans.table.status'), field: 'status', align: 'center' },
+  { name: 'actions', label: t('loans.table.actions'), field: 'id', align: 'center' },
+]);
 
 const tableRows = computed<LoanTableRow[]>(() =>
   loans.value.map((loan) => ({
     ...loan,
-    userName: userNames.value.get(loan.userId) ?? `Usuário #${loan.userId}`,
-    bookTitle: bookTitles.value.get(loan.bookId) ?? `Livro #${loan.bookId}`,
+    userName: userNames.value.get(loan.userId) ?? t('loans.references.userFallback', { id: loan.userId }),
+    bookTitle: bookTitles.value.get(loan.bookId) ?? t('loans.references.bookFallback', { id: loan.bookId }),
     loanDateLabel: formatDate(loan.loanDate),
     returnDateLabel: formatDate(loan.returnDate),
   })),
@@ -301,12 +304,14 @@ const tableRows = computed<LoanTableRow[]>(() =>
 
 const noDataMessage = computed(() =>
   search.value.trim() || statusFilter.value
-    ? 'Nenhum aluguel encontrado para estes filtros.'
-    : 'Ainda não há aluguéis cadastrados.',
+    ? t('loans.empty.filtered')
+    : t('loans.empty.list'),
 );
 
 const pageLabel = computed(() =>
-  totalPages.value > 0 ? `Página ${page.value + 1} de ${totalPages.value}` : 'Nenhuma página',
+  totalPages.value > 0
+    ? t('loans.pagination.page', { current: page.value + 1, total: totalPages.value })
+    : t('loans.pagination.noPages'),
 );
 
 async function loadDashboardStats() {
@@ -331,8 +336,10 @@ async function loadDashboardStats() {
     if (!dashboardRefreshPending || dashboardAccessDenied) {
       dashboard.value = null;
       dashboardError.value = dashboardAccessDenied
-        ? 'Você não tem permissão para visualizar as estatísticas.'
-        : 'Não foi possível carregar as estatísticas de empréstimos.';
+        ? t('loans.errors.dashboardForbidden')
+        : axios.isAxiosError(error) && !error.response
+          ? t('loans.errors.serviceUnavailable')
+          : t('loans.errors.dashboardLoad');
     }
   } finally {
     dashboardLoading.value = false;
@@ -344,16 +351,24 @@ async function loadDashboardStats() {
 }
 
 function formatDate(value: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
-  return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match || !value) return value;
+
+  const date = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) return value;
+
+  return new Intl.DateTimeFormat(locale.value, {
+    dateStyle: 'short',
+    timeZone: 'UTC',
+  }).format(date);
 }
 
 function getStatusLabel(status: LoanStatus): string {
   const labels: Record<LoanStatus, string> = {
-    PENDING: 'Pendente',
-    OVERDUE: 'Atrasado',
-    RETURNED: 'Devolvido',
-    RETURNED_LATE: 'Devolvido C/A',
+    PENDING: t('loans.status.pending'),
+    OVERDUE: t('loans.status.overdue'),
+    RETURNED: t('loans.status.returned'),
+    RETURNED_LATE: t('loans.status.returnedLate'),
   };
   return labels[status];
 }
@@ -388,13 +403,15 @@ async function loadLoans() {
     totalElements.value = response.totalElements;
     totalPages.value = response.totalPages;
     if (loans.value.length && !referencesAttempted.value) void loadReferences();
-  } catch {
+  } catch (error: unknown) {
     if (requestId !== loansRequestId) return;
 
     loans.value = [];
     totalElements.value = 0;
     totalPages.value = 0;
-    loansError.value = 'Não foi possível carregar os aluguéis. Tente novamente.';
+    loansError.value = axios.isAxiosError(error) && !error.response
+      ? t('loans.errors.serviceUnavailable')
+      : t('loans.errors.load');
   } finally {
     if (requestId === loansRequestId) loansLoading.value = false;
   }
@@ -441,8 +458,10 @@ async function loadReferences() {
     userNames.value = new Map(userRecords.map((user): [number, string] => [user.id, user.name]));
     bookTitles.value = new Map(bookRecords.map((book): [number, string] => [book.id, book.title]));
     referencesLoaded.value = true;
-  } catch {
-    referencesError.value = 'Não foi possível carregar os nomes de usuários e livros.';
+  } catch (error: unknown) {
+    referencesError.value = axios.isAxiosError(error) && !error.response
+      ? t('loans.errors.serviceUnavailable')
+      : t('loans.errors.referencesLoad');
   } finally {
     referencesLoading.value = false;
   }
@@ -469,6 +488,10 @@ function cancelLoanForm() {
 }
 
 function getLoanSaveErrorMessage(error: unknown, isEditing: boolean): string {
+  if (axios.isAxiosError(error) && !error.response) {
+    return t('loans.errors.serviceUnavailable');
+  }
+
   let backendMessage = '';
   let status: number | undefined;
 
@@ -491,27 +514,27 @@ function getLoanSaveErrorMessage(error: unknown, isEditing: boolean): string {
     .replace(/[\u0300-\u036f]/g, '');
 
   if (/user.*(not found|does not exist)|usuario.*(nao encontrado|inexistente|nao existe)/.test(normalized)) {
-    return 'O usuário selecionado não foi encontrado.';
+    return t('loans.errors.userNotFound');
   }
   if (/book.*(not found|does not exist)|livro.*(nao encontrado|inexistente|nao existe)/.test(normalized)) {
-    return 'O livro selecionado não foi encontrado.';
+    return t('loans.errors.bookNotFound');
   }
   if (
     /book.*(unavailable|no stock|no copies|not available)|no available copies|livro.*(sem exemplar|sem estoque|indisponivel|nao possui exemplares)/.test(
       normalized,
     )
   ) {
-    return 'O livro não possui exemplares disponíveis para empréstimo.';
+    return t('loans.errors.bookUnavailable');
   }
   if (
     /(five|cinco|5).*(loan|emprest)|limit.*(loan|emprest)|limite.*emprest|emprestimos ativos|active loans/.test(
       normalized,
     )
   ) {
-    return 'O usuário atingiu o limite de cinco empréstimos ativos.';
+    return t('loans.errors.loanLimit');
   }
   if (/\b(date|dates|data|datas)\b|loan date|return date/.test(normalized)) {
-    return 'As datas informadas são inválidas. Confira o período do empréstimo.';
+    return t('loans.errors.invalidDates');
   }
   if (
     isEditing &&
@@ -519,15 +542,15 @@ function getLoanSaveErrorMessage(error: unknown, isEditing: boolean): string {
       normalized,
     )
   ) {
-    return 'Não é permitido alterar o usuário ou o livro de um empréstimo.';
+    return t('loans.errors.cannotChangeReferences');
   }
   if (status === 409) {
     return isEditing
-      ? 'O empréstimo não pode ser editado devido às regras do backend.'
-      : 'O empréstimo conflita com uma regra do backend. Verifique os dados e tente novamente.';
+      ? t('loans.errors.updateConflict')
+      : t('loans.errors.createConflict');
   }
 
-  return backendMessage || 'Não foi possível salvar o empréstimo. Verifique os dados e tente novamente.';
+  return t('loans.errors.save');
 }
 
 async function saveLoan(payload: LoanRequest) {
@@ -536,7 +559,7 @@ async function saveLoan(payload: LoanRequest) {
   const isEditing = loanFormMode.value === 'edit';
   const loanId = selectedLoan.value?.id;
   if (isEditing && loanId === undefined) {
-    loanFormError.value = 'Não foi possível identificar o empréstimo para edição.';
+    loanFormError.value = t('loans.errors.loanIdMissing');
     return;
   }
 
@@ -553,7 +576,7 @@ async function saveLoan(payload: LoanRequest) {
     selectedLoan.value = null;
     await reloadLoansAfterOperation();
     await loadDashboardStats();
-  } catch (error) {
+  } catch (error: unknown) {
     loanFormError.value = getLoanSaveErrorMessage(error, isEditing);
   } finally {
     savingLoan.value = false;
@@ -575,26 +598,17 @@ function cancelReturnConfirmation() {
 }
 
 function getReturnErrorMessage(error: unknown): string {
-  const fallback =
-    'Não foi possível registrar a devolução. Verifique sua conexão e tente novamente.';
-  if (!error || typeof error !== 'object' || !('response' in error)) return fallback;
+  const fallback = t('loans.errors.return');
+  if (axios.isAxiosError(error) && !error.response) {
+    return t('loans.errors.serviceUnavailable');
+  }
+  if (!axios.isAxiosError(error)) return fallback;
 
   const response = error.response;
-  if (!response || typeof response !== 'object') return fallback;
-  const details = response as { status?: number; data?: unknown };
-  let backendMessage = '';
-  if (typeof details.data === 'string') backendMessage = details.data;
-  else if (details.data && typeof details.data === 'object') {
-    const data = details.data as Record<string, unknown>;
-    backendMessage = [data.message, data.detail, data.error]
-      .filter((value): value is string => typeof value === 'string')
-      .join(' ');
-  }
-
-  if (details.status === 404) return backendMessage || 'Este empréstimo não foi encontrado.';
-  if (details.status === 409)
-    return backendMessage || 'Este empréstimo já foi devolvido ou não pode ser devolvido.';
-  return backendMessage || fallback;
+  if (!response) return fallback;
+  if (response.status === 404) return t('loans.errors.loanNotFound');
+  if (response.status === 409) return t('loans.errors.returnConflict');
+  return fallback;
 }
 
 async function confirmReturnLoan() {
@@ -608,7 +622,7 @@ async function confirmReturnLoan() {
     pendingReturnLoan.value = null;
     $q.notify({
       type: 'positive',
-      message: 'Devolução registrada com sucesso.',
+      message: t('loans.success.returned'),
       position: 'top-right',
     });
     await reloadLoansAfterOperation();

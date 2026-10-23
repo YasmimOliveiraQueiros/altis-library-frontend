@@ -3,11 +3,11 @@
     <q-banner v-if="errorMessage" dense class="error-banner" role="alert">
       {{ errorMessage }}
       <template #action>
-        <q-btn flat label="Tentar novamente" :loading="loading" @click="loadDashboard" />
+        <q-btn flat :label="t('loans.actions.retry')" :loading="loading" @click="loadDashboard" />
       </template>
     </q-banner>
 
-    <section class="summary-cards" aria-label="Estatísticas">
+    <section class="summary-cards" :aria-label="t('adminDashboard.statistics')">
       <q-card v-for="card in summaryCards" :key="card.key" flat bordered class="summary-card">
         <div class="summary-label">
           <span class="summary-dot" :class="card.indicatorClass"></span>
@@ -22,16 +22,16 @@
 
     <section class="insights-grid">
       <q-card flat bordered class="dashboard-panel monthly-panel">
-        <div class="card-title">Empréstimos por mês</div>
-        <div v-if="loading && !dashboard" class="panel-message">Carregando dados…</div>
-        <div v-else-if="errorMessage" class="panel-message">Não foi possível carregar os dados mensais.</div>
-        <div v-else-if="monthlyLoans.length" class="monthly-chart" aria-label="Empréstimos por mês">
+        <div class="card-title">{{ t('adminDashboard.monthlyLoans') }}</div>
+        <div v-if="loading && !dashboard" class="panel-message">{{ t('adminDashboard.loading') }}</div>
+        <div v-else-if="errorMessage" class="panel-message">{{ t('adminDashboard.monthlyError') }}</div>
+        <div v-else-if="monthlyLoans.length" class="monthly-chart" :aria-label="t('adminDashboard.monthlyLoans')">
           <div
             v-for="month in monthlyLoans"
             :key="`${month.year}-${month.month}`"
             class="month-column"
             role="group"
-            :aria-label="`${month.label} ${month.year}: ${month.quantity} empréstimos`"
+            :aria-label="t('adminDashboard.monthDescription', { month: month.label, year: month.year, count: month.quantity })"
           >
             <span class="bar-value">{{ month.quantity }}</span>
             <div class="bar-area">
@@ -40,11 +40,11 @@
             <span class="month-label">{{ month.label }}</span>
           </div>
         </div>
-        <div v-else class="panel-message">Nenhum dado mensal disponível.</div>
+        <div v-else class="panel-message">{{ t('adminDashboard.noMonthlyData') }}</div>
       </q-card>
 
       <q-card flat bordered class="dashboard-panel books-panel">
-        <div class="card-title">Livros por status</div>
+        <div class="card-title">{{ t('adminDashboard.booksByStatus') }}</div>
         <div class="book-status-list">
           <div v-for="status in bookStatuses" :key="status.label" class="book-status-row">
             <div class="book-status-label">
@@ -61,18 +61,18 @@
 
     <q-card flat bordered class="recent-loans">
       <div class="recent-heading">
-        <div class="card-title">Empréstimos recentes</div>
-        <q-btn flat dense no-caps label="Ver todos" to="/alugueis" class="view-all" />
+        <div class="card-title">{{ t('adminDashboard.recentLoans') }}</div>
+        <q-btn flat dense no-caps :label="t('adminDashboard.viewAll')" to="/alugueis" class="view-all" />
       </div>
       <div v-if="loading && !dashboard" class="state-content">
         <q-spinner color="primary" size="28px" />
-        <span>Carregando dados…</span>
+        <span>{{ t('adminDashboard.loading') }}</span>
       </div>
       <div v-else-if="!dashboard && errorMessage" class="state-content">
-        Não foi possível carregar os últimos aluguéis.
+        {{ t('adminDashboard.recentLoansError') }}
       </div>
       <div v-else-if="!dashboard?.latestLoans.length" class="state-content">
-        Nenhum aluguel recente encontrado.
+        {{ t('adminDashboard.noRecentLoans') }}
       </div>
       <div v-else class="table-scroll">
         <q-table
@@ -83,7 +83,7 @@
           :loading="referencesLoading"
           hide-pagination
           :rows-per-page-options="[0]"
-          no-data-label="Nenhum aluguel recente encontrado."
+          :no-data-label="t('adminDashboard.noRecentLoans')"
           class="loans-table"
         >
           <template #body-cell-status="props">
@@ -95,7 +95,7 @@
           </template>
         </q-table>
         <div v-if="referencesError" class="reference-note" role="status">
-          Alguns nomes não puderam ser carregados; os IDs estão sendo exibidos.
+          {{ t('adminDashboard.referencesFallback') }}
         </div>
       </div>
     </q-card>
@@ -104,6 +104,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import axios from 'axios';
+import { useI18n } from 'vue-i18n';
 import type { QTableColumn } from 'quasar';
 import { BookService } from '@/services/BookService';
 import { DashboardService } from '@/services/DashboardService';
@@ -128,6 +130,8 @@ type DashboardCountKey =
   | 'overdueLoans'
   | 'returnedLoans';
 
+const { t, locale } = useI18n();
+
 const dashboard = ref<DashboardResponse | null>(null);
 const loading = ref(false);
 const errorMessage = ref('');
@@ -136,35 +140,41 @@ const referencesError = ref(false);
 const userNames = ref(new Map<number, string>());
 const bookTitles = ref(new Map<number, string>());
 
-const columns: QTableColumn<LatestLoanRow>[] = [
-  { name: 'book', label: 'Livro', field: 'bookTitle', align: 'left' },
-  { name: 'user', label: 'Locatário', field: 'userName', align: 'left' },
-  { name: 'returnDate', label: 'Devolução', field: 'returnDateLabel', align: 'left' },
-  { name: 'status', label: 'Status', field: 'status', align: 'center' },
-];
+const columns = computed<QTableColumn<LatestLoanRow>[]>(() => [
+  { name: 'book', label: t('loans.table.book'), field: 'bookTitle', align: 'left' },
+  { name: 'user', label: t('loans.table.borrower'), field: 'userName', align: 'left' },
+  { name: 'returnDate', label: t('loans.table.returnDate'), field: 'returnDateLabel', align: 'left' },
+  { name: 'status', label: t('loans.table.status'), field: 'status', align: 'center' },
+]);
 
 const latestLoanRows = computed<LatestLoanRow[]>(() =>
   (dashboard.value?.latestLoans ?? []).slice(0, 3).map((loan) => ({
     ...loan,
-    bookTitle: bookTitles.value.get(loan.bookId) ?? `Livro #${loan.bookId}`,
-    userName: userNames.value.get(loan.userId) ?? `Usuário #${loan.userId}`,
-    returnDateLabel: `${loan.status === 'PENDING' || loan.status === 'OVERDUE' ? 'Prevista: ' : ''}${formatDate(loan.returnDate)}`,
+    bookTitle: bookTitles.value.get(loan.bookId) ?? t('loans.references.bookFallback', { id: loan.bookId }),
+    userName: userNames.value.get(loan.userId) ?? t('loans.references.userFallback', { id: loan.userId }),
+    returnDateLabel: `${loan.status === 'PENDING' || loan.status === 'OVERDUE' ? `${t('adminDashboard.expectedPrefix')} ` : ''}${formatDate(loan.returnDate)}`,
   })),
 );
 
 const summaryCards = computed(() => {
   const cards: { key: DashboardCountKey; label: string; indicatorClass: string }[] = [
-    { key: 'totalBooks', label: 'Livros', indicatorClass: 'books' },
-    { key: 'totalPublishers', label: 'Editoras', indicatorClass: 'publishers' },
-    { key: 'activeLoans', label: 'Alugados', indicatorClass: 'active' },
-    { key: 'totalUsers', label: 'Usuários', indicatorClass: 'users' },
-    { key: 'pendingLoans', label: 'Pendentes', indicatorClass: 'pending' },
-    { key: 'overdueLoans', label: 'Atrasados', indicatorClass: 'overdue' },
+    { key: 'totalBooks', label: t('navigation.books'), indicatorClass: 'books' },
+    { key: 'totalPublishers', label: t('navigation.publishers'), indicatorClass: 'publishers' },
+    { key: 'activeLoans', label: t('readerDashboard.activeLoans'), indicatorClass: 'active' },
+    { key: 'totalUsers', label: t('navigation.users'), indicatorClass: 'users' },
+    { key: 'pendingLoans', label: t('loans.stats.pending'), indicatorClass: 'pending' },
+    { key: 'overdueLoans', label: t('loans.stats.overdue'), indicatorClass: 'overdue' },
   ];
   return cards;
 });
 
-const monthLabels = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const monthLabels = computed(() =>
+  Array.from({ length: 12 }, (_, month) =>
+    new Intl.DateTimeFormat(locale.value, { month: 'short' })
+      .format(new Date(Date.UTC(2024, month, 1)))
+      .replace(/\.$/, ''),
+  ),
+);
 const monthlyLoans = computed(() => {
   const loans = [...(dashboard.value?.loansByMonth ?? [])].sort(
     (a, b) => a.year - b.year || a.month - b.month,
@@ -173,7 +183,7 @@ const monthlyLoans = computed(() => {
 
   return loans.map((loan) => ({
     ...loan,
-    label: monthLabels[loan.month - 1] ?? String(loan.month),
+    label: monthLabels.value[loan.month - 1] ?? String(loan.month),
     height: maximum > 0 ? (loan.quantity / maximum) * 100 : 0,
   }));
 });
@@ -185,13 +195,13 @@ const bookStatuses = computed(() => {
 
   return [
     {
-      label: 'Disponíveis',
+      label: t('adminDashboard.availableBooks'),
       class: 'available',
       quantity: available,
       percentage: total > 0 && available !== null ? (available / total) * 100 : 0,
     },
     {
-      label: 'Alugados',
+      label: t('adminDashboard.rentedBooks'),
       class: 'rented',
       quantity: rented,
       percentage: total > 0 && rented !== null ? (rented / total) * 100 : 0,
@@ -208,9 +218,13 @@ async function loadDashboard() {
   try {
     dashboard.value = await DashboardService.getDashboard();
     void loadReferences(dashboard.value.latestLoans.slice(0, 3));
-  } catch {
+  } catch (error: unknown) {
     dashboard.value = null;
-    errorMessage.value = 'Não foi possível carregar o dashboard. Tente novamente.';
+    errorMessage.value = axios.isAxiosError(error) && !error.response
+      ? t('loans.errors.serviceUnavailable')
+      : axios.isAxiosError(error) && error.response?.status === 403
+        ? t('loans.errors.dashboardForbidden')
+        : t('adminDashboard.loadError');
   } finally {
     loading.value = false;
   }
@@ -251,15 +265,24 @@ async function loadReferences(loans: LoanResponse[]) {
 
 function formatDate(value: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
-  return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
+  if (!match) return value;
+
+  const date = new Date(`${match[1]}-${match[2]}-${match[3]}T00:00:00`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat(locale.value, {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(date);
 }
 
 function getStatusLabel(status: LoanStatus): string {
   const labels: Record<LoanStatus, string> = {
-    PENDING: 'Pendente',
-    OVERDUE: 'Atrasado',
-    RETURNED: 'Devolvido',
-    RETURNED_LATE: 'Devolvido C/A',
+    PENDING: t('loans.status.pending'),
+    OVERDUE: t('loans.status.overdue'),
+    RETURNED: t('loans.status.returned'),
+    RETURNED_LATE: t('loans.status.returnedLate'),
   };
   return labels[status];
 }
