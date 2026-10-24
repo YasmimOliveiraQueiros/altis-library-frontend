@@ -10,8 +10,7 @@
       </q-card-section>
 
       <q-card-section class="dialog-message">
-        {{ message }}
-        <strong>{{ recordName }}</strong>?
+        {{ message }}<strong v-if="recordName">{{ recordName }}</strong>{{ recordName !== undefined ? '?' : '' }}
         <div v-if="errorMessage" class="dialog-error text-negative" role="alert">
           {{ errorMessage }}
         </div>
@@ -43,7 +42,7 @@ const props = withDefaults(defineProps<{
   modelValue: boolean;
   title: string;
   message: string;
-  recordName: string;
+  recordName?: string;
   cancelLabel?: string;
   confirmLabel?: string;
   errorMessage?: string;
