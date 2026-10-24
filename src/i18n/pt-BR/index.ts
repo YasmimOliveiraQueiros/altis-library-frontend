@@ -381,6 +381,25 @@ export default {
   },
   profile: {
     editProfile: 'Editar perfil',
+    personalData: 'Dados pessoais',
+    passwordSection: 'Alteração de senha (opcional)',
+    currentPassword: 'Senha atual',
+    newPassword: 'Nova senha',
+    confirmPassword: 'Confirmar nova senha',
+    togglePassword: 'Mostrar ou ocultar senha',
+    saveChanges: 'Salvar alterações',
+    passwordFieldsRequired: 'Preencha os três campos para alterar a senha.',
+    partialUpdate: 'Dados pessoais salvos, mas a senha não foi alterada: {error}',
+    errors: { generic: 'Não foi possível concluir a operação.', conflict: 'A solicitação conflita com os dados atuais.', currentPassword: 'A senha atual está incorreta.' },
+    success: { profile: 'Dados pessoais atualizados com sucesso.', profileAndPassword: 'Perfil e senha atualizados. Entre novamente com sua nova senha.' },
+    closeAccount: {
+      title: 'Encerrar conta',
+      confirmation: 'Você perderá acesso ao sistema. Seu histórico de empréstimos será preservado. Deseja confirmar o encerramento da conta?',
+      cancel: 'Cancelar',
+      pendingLoans: 'Não foi possível encerrar a conta enquanto houver empréstimos pendentes.',
+      success: 'Conta encerrada com sucesso.',
+      error: 'Não foi possível encerrar a conta. Tente novamente.',
+    },
     languageLabel: 'Alterar idioma',
 
     language: {

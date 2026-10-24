@@ -356,6 +356,25 @@ export default {
   },
   profile: {
     editProfile: 'Editar perfil',
+    personalData: 'Datos personales',
+    passwordSection: 'Cambiar contraseña (opcional)',
+    currentPassword: 'Contraseña actual',
+    newPassword: 'Nueva contraseña',
+    confirmPassword: 'Confirmar nueva contraseña',
+    togglePassword: 'Mostrar u ocultar contraseña',
+    saveChanges: 'Guardar cambios',
+    passwordFieldsRequired: 'Completa los tres campos para cambiar la contraseña.',
+    partialUpdate: 'Los datos personales se guardaron, pero la contraseña no se cambió: {error}',
+    errors: { generic: 'No se pudo completar la operación.', conflict: 'La solicitud entra en conflicto con los datos actuales.', currentPassword: 'La contraseña actual es incorrecta.' },
+    success: { profile: 'Datos personales actualizados correctamente.', profileAndPassword: 'Perfil y contraseña actualizados. Inicia sesión de nuevo con tu nueva contraseña.' },
+    closeAccount: {
+      title: 'Cerrar cuenta',
+      confirmation: 'Perderás el acceso al sistema. Se conservará tu historial de préstamos. ¿Confirmas el cierre de la cuenta?',
+      cancel: 'Cancelar',
+      pendingLoans: 'No se puede cerrar la cuenta mientras haya préstamos pendientes.',
+      success: 'Cuenta cerrada correctamente.',
+      error: 'No se pudo cerrar la cuenta. Inténtalo de nuevo.',
+    },
 
     languageLabel: 'Cambiar idioma',
 

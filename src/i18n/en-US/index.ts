@@ -372,6 +372,25 @@ export default {
   },
   profile: {
     editProfile: 'Edit profile',
+    personalData: 'Personal details',
+    passwordSection: 'Change password (optional)',
+    currentPassword: 'Current password',
+    newPassword: 'New password',
+    confirmPassword: 'Confirm new password',
+    togglePassword: 'Show or hide password',
+    saveChanges: 'Save changes',
+    passwordFieldsRequired: 'Fill in all three fields to change your password.',
+    partialUpdate: 'Personal details were saved, but the password was not changed: {error}',
+    errors: { generic: 'Could not complete the operation.', conflict: 'The request conflicts with the current data.', currentPassword: 'The current password is incorrect.' },
+    success: { profile: 'Personal details updated successfully.', profileAndPassword: 'Profile and password updated. Sign in again with your new password.' },
+    closeAccount: {
+      title: 'Close account',
+      confirmation: 'You will lose access to the system. Your loan history will be preserved. Do you confirm closing your account?',
+      cancel: 'Cancel',
+      pendingLoans: 'The account cannot be closed while there are pending loans.',
+      success: 'Account closed successfully.',
+      error: 'Could not close the account. Please try again.',
+    },
 
     languageLabel: 'Change language',
 
