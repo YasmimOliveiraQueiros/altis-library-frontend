@@ -50,7 +50,8 @@ export default defineConfig((ctx) => {
 
       // publicPath: '/',
       // define: {},
-      // defineEnv: {}
+       defineEnv: {
+       API_URL: process.env.QCLI_API_URL},
       // ignorePublicFolder: true,
       // minify: false,
       // distDir
