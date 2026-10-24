@@ -5,11 +5,24 @@ export interface UserResponse {
     phone: string;
     cpf: string;
     birthDate: string;
-    adress: string;
+    address: string;
     isAdmin: boolean;
     active: boolean;
-    createAt: string;
-    updateAt: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface UpdateMyProfileRequest {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+}
+
+export interface ChangeMyPasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
 }
 
 
